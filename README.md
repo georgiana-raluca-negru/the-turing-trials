@@ -1,12 +1,10 @@
 ## The Turing Trials 
 **Interactive Multi-Agent Courtroom Simulation**
 
-## 📖 Project Overview
+## Project Overview
 **The Turing Trials** is a gamified web application that simulates a courtroom environment using a multi-agent Large Language Model (LLM) architecture. Instead of a simple chatbot interface, this platform orchestrates a turn-based legal battle where human players and autonomous AI agents take on the roles of Defense Attorney, Prosecutor, and Judge. 
 
 The core innovation lies in our **AI Clerk Agent**, which dynamically generates structured case files (JSON) based on a simple user prompt. To prevent AI hallucinations, the prosecuting and defending agents are strictly constrained by the system to argue using only the generated "Evidence Inventory". Players must strategically attach evidence cards to their arguments and can use an "Objection" mechanic to interrupt flawed AI logic in real-time. The match concludes with an objective verdict from the AI Judge, and the results are saved to the user's match history.
-
----
 
 ## Product Backlog: User Stories
 
@@ -36,5 +34,5 @@ The core innovation lies in our **AI Clerk Agent**, which dynamically generates 
 * **US15:** As a player, I want to see a visual progress bar called "Scales of Justice" that tilts towards me or the opponent after each round (evaluated in the background by the AI Judge), **so that** I can monitor the current score of the match in real-time.
 * **US16:** As the AI Judge Agent, I want to stop the trial after a predefined number of rounds, analyze the chat history along with the Scales of Justice, and generate a motivated final verdict (Guilty/Not Guilty), saving the result to the database, **so that** I can officially close the game session.
 
-### 🤖 Epic 6: AI Evals & Testing (DevOps)
+### AI Evals & Testing (DevOps)
 * **US17:** As a developer, I want to write automated test scripts that simulate false/invented arguments being submitted, **so that** I can verify if the AI Judge correctly rejects fabricated evidence (Agent Evals).
