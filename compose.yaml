@@ -1,0 +1,16 @@
+services:
+  new-project-db:
+    image: postgres:17
+    container_name: new-project-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-admin_user}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD not set in .env}"
+      POSTGRES_DB: "${POSTGRES_DB:-the_turing_trials}"
+    ports:
+      - "5433:5432"
+    volumes:
+      - type: bind
+        source: ./postgres_volume
+        target: /var/lib/postgresql/data
+      - D:\facultate\anul_2\semestrul_2\MDS_proiect\the-turing-trials\init-db:/docker-entrypoint-initdb.d:ro
