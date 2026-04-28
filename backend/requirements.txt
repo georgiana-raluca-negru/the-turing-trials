@@ -1,0 +1,25 @@
+# -------------------------------------
+# 1. Core Web Server & API
+# -------------------------------------
+fastapi          
+uvicorn[standard] 
+python-dotenv    
+
+# -------------------------------------
+# 2. AI & Multi-Agent (LangGraph)
+# -------------------------------------
+langgraph        
+langchain        
+langchain-openai 
+
+# -------------------------------------
+# 3. Database (PostgreSQL)
+# -------------------------------------
+sqlalchemy       
+asyncpg          
+alembic          
+
+# -------------------------------------
+# 4. Game State & Caching
+# -------------------------------------
+redis
