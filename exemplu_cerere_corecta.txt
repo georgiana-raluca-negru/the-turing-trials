@@ -1,0 +1,20 @@
+Aici am generat un request functional catre minimax 2.7 in powershell
+
+(.venv) PS D:\facultate\anul_2\semestrul_2\MDS_proiect\the-turing-trials> $headers = @{
+>>   Authorization = "Bearer cheie_reala"
+>>   "Content-Type" = "application/json"
+>> }
+>> 
+>> $body = @{
+>>   model = "MiniMax-M2.7"
+>>   messages = @(
+>>     @{ role = "system"; content = "You are a concise assistant." }
+>>     @{ role = "user"; content = "Write one sentence explaining what a state graph is." }
+>>   )
+>>   temperature = 0.3
+>> } | ConvertTo-Json -Depth 5
+>> 
+>> Invoke-RestMethod -Method Post `
+>>   -Uri "https://api.minimax.io/v1/chat/completions" `
+>>   -Headers $headers `
+>>   -Body $body

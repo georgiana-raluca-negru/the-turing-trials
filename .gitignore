@@ -1,3 +1,5 @@
 .env
+.venv
+.langgraph_api
 postgres_volume
 init-dev-user.sql
