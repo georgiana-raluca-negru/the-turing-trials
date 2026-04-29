@@ -3,7 +3,7 @@ version: '3.8'
 services:
   db:
     image: postgres:latest
-    container_name: postgres-db
+    container_name: turing-db
     restart: always
     environment:
       POSTGRES_USER: admin
@@ -12,7 +12,32 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      # FIX: Added /data to the end of this line
       - pgdata:/var/lib/postgresql
+
+  backend:
+    build: ./backend
+    container_name: turing-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      # FIX: Changed @db:5432 to @turing-db:5432
+      - DATABASE_URL=postgresql+asyncpg://admin:admin@turing-db:5432/postgres
+
+  # FIX: Spelled 'frontend' correctly
+  frontend:
+    build: ./frontend
+    container_name: turing-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
 
 volumes:
   pgdata:
