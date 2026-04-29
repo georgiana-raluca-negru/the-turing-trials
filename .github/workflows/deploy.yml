@@ -1,26 +1,35 @@
 name: Turing Trials CI/CD
+
 on: 
-    push:
-        branches: 
-            - main
+  push:
+    branches: 
+      - main
 
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Dau si eu Deploy
-              uses: appleboy/ssh-action@v1.0.3
-              with:
-                host: ${{ secrets.SERVER_HOST }}
-                username: ${{ secrets.SERVER_USERNAME }}
-                key: ${{ secrets.SSH_KEY }}
-                port: 2222
-                script: |
-                    if [ -d "test" ]; then 
-                        echo "e deja"
-                    else 
-                        git clone https://github.com/georgiana-raluca-negru/the-turing-trials.git
-                    fi
-
-                    cd test
-                    echo "ceva" > file.txt
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Full-Stack to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 2222
+          script: |
+            # 1. Check if the folder exists. If not, clone the repo for the first time.
+            if [ ! -d "the-turing-trials" ]; then 
+                git clone https://github.com/georgiana-raluca-negru/the-turing-trials.git
+            fi
+            
+            # 2. Move inside the project folder
+            cd the-turing-trials
+            
+            # 3. Pull the absolute latest code from GitHub
+            git pull origin main
+            
+            # 4. Rebuild the containers with the new code and turn them on!
+            docker-compose up -d --build
+            
+            # 5. Take out the trash (Crucial for servers!)
+            docker image prune -f
