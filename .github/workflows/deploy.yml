@@ -6,6 +6,7 @@ on:
       - main
       - 4-initizalize-monorepo-project-structure
 
+      
 jobs:
   deploy:
     name: Production Server Deploy
