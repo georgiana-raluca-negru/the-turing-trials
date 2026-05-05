@@ -29,7 +29,10 @@ app = FastAPI(lifespan=lifespan)
 # Your existing CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://cine406.go.ro:3001",
+        "http://localhost:3001",      # for local development
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
