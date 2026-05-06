@@ -10,15 +10,26 @@ export default function Home() {
   });
 
   useEffect(() => {
-    // The Waiter walking over to the Kitchen (Port 8000)
-    fetch("http://127.0.0.1:8000/api/system-check")
-      .then((res) => res.json())
+    // Let's explicitly log the URL we are trying to hit
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+    console.log("Trying to fetch from:", apiUrl);
+    
+    fetch(`${apiUrl}/api/system-check`)
+      .then((res) => {
+        if (!res.ok) {
+           throw new Error(`HTTP Error! Status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => setSystemData(data))
-      .catch(() => setSystemData({
-        message: "Failed to connect to backend.",
-        backend_status: "Offline 🔴",
-        database_status: "Unknown ⚪"
-      }));
+      .catch((error) => {
+        console.error("The exact fetch error is:", error);
+        setSystemData({
+          message: `Network Error: ${error.message}`,
+          backend_status: "Offline 🔴",
+          database_status: "Unknown ⚪"
+        });
+      });
   }, []);
 
   return (
