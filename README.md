@@ -162,7 +162,7 @@ docker compose down -v
 
 The application is hosted on an Ubuntu server with Nginx configured as a reverse proxy.
 
-The current live URL is: [http://cine4-6.go.ro](http://cine406.go.ro)
+The current live URL is: [http://cine406.go.ro](http://cine406.go.ro)
 
 > A dedicated domain for the application is planned and will replace the current URL once configured.
 
