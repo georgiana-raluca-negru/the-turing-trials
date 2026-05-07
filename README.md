@@ -18,8 +18,9 @@
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Local Setup](#local-setup)
+- [Deployment](#deployment)
 - [Product Backlog - User Stories](#product-backlog---user-stories)
-- [Contributing](#contributing)
+- [Contributinh](#contributing)
 
 ---
 
@@ -55,6 +56,7 @@ The core innovation is the **AI Clerk Agent**, which dynamically generates struc
 | **AI / LLM** | Multi-agent LLM orchestration (AI Clerk, Defense, Prosecution, Judge agents) |
 | **Containerization** | Docker, Docker Compose |
 | **CI/CD** | GitHub Actions |
+| **Server** | Ubuntu Server, Nginx (reverse proxy) |
 
 ### Planned
 
@@ -67,7 +69,6 @@ The core innovation is the **AI Clerk Agent**, which dynamically generates struc
 | **Database Migrations** | Alembic | Safe schema versioning for SQLAlchemy models |
 | **Frontend State** | Zustand / Redux Toolkit, TanStack Query | Global courtroom state, server-state caching |
 | **Testing** | pytest, pytest-asyncio, Jest, React Testing Library, Playwright | Unit, integration & end-to-end tests |
-| **Deployment** | Railway / Render / AWS, Nginx | Cloud hosting, reverse proxy |
 
 ---
 
@@ -124,7 +125,6 @@ POSTGRES_DB=turing_db
 NEXT_PUBLIC_API_URL=http://localhost:8001
 ```
 
-
 ### 3. Start the Application
 
 ```bash
@@ -155,6 +155,16 @@ To also remove the persisted database volume:
 ```bash
 docker compose down -v
 ```
+
+---
+
+## Deployment
+
+The application is hosted on an Ubuntu server with Nginx configured as a reverse proxy.
+
+The current live URL is: [http://cine4-6.go.ro](http://cine4-6.go.ro)
+
+> A dedicated domain for the application is planned and will replace the current URL once configured.
 
 ---
 
@@ -218,6 +228,7 @@ Before writing any code, [open a GitHub Issue](https://github.com/georgiana-ralu
 Fork the repository and create a branch that references the issue number:
 
 ```bash
+
 git clone https://github.com/<your-username>/the-turing-trials.git
 cd the-turing-trials
 
@@ -235,8 +246,10 @@ git checkout -b feature/42-spectator-chat-panel
 ### 3. Commit, Push & Open a Pull Request
 
 ```bash
+# Make your changes, then commit
 git commit -m 'feat: add spectator chat panel (closes #42)'
 
+# Push your branch
 git push origin feature/42-spectator-chat-panel
 ```
 
@@ -245,5 +258,4 @@ Then open a Pull Request against `main`. In the PR description, use one of the G
 ```
 Closes #42
 ```
-
 ---
