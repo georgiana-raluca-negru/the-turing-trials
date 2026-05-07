@@ -1,4 +1,4 @@
-# ⚖️ The Turing Trials
+# The Turing Trials
 
 > **Interactive Multi-Agent Courtroom Simulation powered by LLMs**
 
@@ -11,6 +11,18 @@
 
 ---
 
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Key Features](#key-features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Local Setup](#local-setup)
+- [Product Backlog - User Stories](#product-backlog---user-stories)
+- [Contributing](#contributing)
+
+---
+
 ## Project Overview
 
 **The Turing Trials** is a gamified web application that simulates a courtroom environment using a **multi-agent Large Language Model (LLM) architecture**. Rather than a simple chatbot, the platform orchestrates a turn-based legal battle where human players and autonomous AI agents take on the roles of **Defense Attorney**, **Prosecutor**, and **Judge**.
@@ -19,19 +31,21 @@ The core innovation is the **AI Clerk Agent**, which dynamically generates struc
 
 ---
 
-##  Key Features
+## Key Features
 
--  **AI Clerk** — generates complete, structured case files from a 1–2 sentence prompt
--  **Multi-role gameplay** — play as Defense Attorney, Prosecutor, Judge, or Spectator
--  **Evidence Inventory** — role-specific evidence cards that must be attached to arguments
--  **Objection Mechanic** — interrupt opponent's AI text generation with a live counter-argument
--  **Scales of Justice** — real-time visual progress bar updated after each round by the AI Judge
--  **Match History** — persistent per-user record of roles, verdicts, and case summaries
--  **Authentication** — email/password and OAuth (Google / GitHub)
+- **AI Clerk** — generates complete, structured case files from a 1-2 sentence prompt
+- **Multi-role gameplay** — play as Defense Attorney, Prosecutor, Judge, or Spectator
+- **Evidence Inventory** — role-specific evidence cards that must be attached to arguments
+- **Objection Mechanic** — interrupt opponent's AI text generation with a live counter-argument
+- **Scales of Justice** — real-time visual progress bar updated after each round by the AI Judge
+- **Match History** — persistent per-user record of roles, verdicts, and case summaries
+- **Authentication** — email/password and OAuth (Google / GitHub)
 
 ---
 
-##  Tech Stack
+## Tech Stack
+
+### Current
 
 | Layer | Technology |
 |---|---|
@@ -42,9 +56,22 @@ The core innovation is the **AI Clerk Agent**, which dynamically generates struc
 | **Containerization** | Docker, Docker Compose |
 | **CI/CD** | GitHub Actions |
 
+### Planned
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Authentication** | Auth.js (NextAuth.js), python-jose / passlib | Google & GitHub OAuth, JWT token handling |
+| **Real-time Communication** | WebSockets (FastAPI native), Socket.IO | Live objection mechanic, Scales of Justice updates |
+| **LLM Orchestration** | LangChain / LangGraph + Streaming API | Multi-agent turn management, streamed text generation |
+| **LLM Provider** | OpenAI / Anthropic / Google Gemini | Powering all AI agents (Clerk, Defense, Prosecution, Judge) |
+| **Database Migrations** | Alembic | Safe schema versioning for SQLAlchemy models |
+| **Frontend State** | Zustand / Redux Toolkit, TanStack Query | Global courtroom state, server-state caching |
+| **Testing** | pytest, pytest-asyncio, Jest, React Testing Library, Playwright | Unit, integration & end-to-end tests |
+| **Deployment** | Railway / Render / AWS, Nginx | Cloud hosting, reverse proxy |
+
 ---
 
-##  Project Structure
+## Project Structure
 
 ```
 the-turing-trials/
@@ -60,7 +87,7 @@ the-turing-trials/
 
 ---
 
-##  Local Setup
+## Local Setup
 
 ### Prerequisites
 
@@ -131,9 +158,9 @@ docker compose down -v
 
 ---
 
-##  Product Backlog — User Stories
+## Product Backlog - User Stories
 
-###  Authentication & User Account
+### Authentication & User Account
 
 | ID | Story |
 |---|---|
@@ -141,15 +168,15 @@ docker compose down -v
 | US2 | As an authenticated user, I want to securely log out, **so that** I can protect my personal data on shared devices. |
 | US3 | As a user, I want a Dashboard showing my match history (role played, case summary, verdict, date), **so that** I can track my progress and overall win rate. |
 
-###  AI Clerk & Match Setup
+### AI Clerk & Match Setup
 
 | ID | Story |
 |---|---|
-| US4 | As a player, I want to input a short prompt (1–2 sentences) describing the trial idea, **so that** I can provide a starting point for the case generation engine. |
+| US4 | As a player, I want to input a short prompt (1-2 sentences) describing the trial idea, **so that** I can provide a starting point for the case generation engine. |
 | US5 | As a player, I want to select my role (Defense Attorney, Prosecutor, Judge, or Spectator), **so that** I can determine my level of interaction in the trial. |
 | US6 | As a player, I want evidence distributed only to my appropriate role (e.g., Defense only sees defense evidence), **so that** strategic competition and surprise are maintained. |
 
-###  Courtroom UI & Evidence Inventory
+### Courtroom UI & Evidence Inventory
 
 | ID | Story |
 |---|---|
@@ -158,7 +185,7 @@ docker compose down -v
 | US9 | As a player, I want to select an evidence card and attach it to my argument draft, **so that** I can submit a valid, fact-based argument to the court. |
 | US10 | As a player, I want used evidence cards to be marked or removed from my folder, **so that** I am challenged to produce new arguments each round. |
 
-###  AI Interaction & Objection Mechanic
+### AI Interaction & Objection Mechanic
 
 | ID | Story |
 |---|---|
@@ -173,7 +200,7 @@ docker compose down -v
 
 ---
 
-##  Contributing
+## Contributing
 
 Contributions, issues, and feature requests are welcome! Please follow the workflow below to keep the project history clean and traceable.
 
@@ -190,7 +217,7 @@ Before writing any code, [open a GitHub Issue](https://github.com/georgiana-ralu
 
 Fork the repository and create a branch that references the issue number:
 
-```bash 
+```bash
 git clone https://github.com/<your-username>/the-turing-trials.git
 cd the-turing-trials
 
@@ -208,10 +235,8 @@ git checkout -b feature/42-spectator-chat-panel
 ### 3. Commit, Push & Open a Pull Request
 
 ```bash
-# Make your changes, then commit
 git commit -m 'feat: add spectator chat panel (closes #42)'
 
-# Push your branch
 git push origin feature/42-spectator-chat-panel
 ```
 
@@ -220,11 +245,5 @@ Then open a Pull Request against `main`. In the PR description, use one of the G
 ```
 Closes #42
 ```
-
----
-
-## 📄 License
-
-This project is open source. See the repository for license details.
 
 ---
