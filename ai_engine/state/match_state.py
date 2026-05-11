@@ -3,8 +3,10 @@ from ai_engine.models.schemas import Evidence, CaseContext, Argument
 
 class MatchState(TypedDict):
     user_prompt: str
+    allow_evidence_reuse: bool
     case_summary: CaseContext
     defense_evidence: List[Evidence]
     prosecution_evidence: List[Evidence]
     messages: List[Argument] # Chat history
     round_number: int # Current round number
+    system_events: List[str] # Non-fatal warnings and runtime notes

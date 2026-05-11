@@ -23,4 +23,6 @@ def get_llm(temperature: float = 0.0) -> BaseChatModel:
         model=model_name,
         temperature=temperature,
         max_tokens=4096,
+        timeout=90,
+        max_retries=2,
     )

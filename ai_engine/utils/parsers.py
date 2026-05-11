@@ -1,11 +1,68 @@
 import re
-import json
-from json_repair import repair_json
 from typing import Type, TypeVar
-from pydantic import BaseModel, ValidationError
+
+from json_repair import repair_json
 from langchain_core.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, ValidationError
 
 T = TypeVar('T', bound=BaseModel)
+
+
+def strip_reasoning_blocks(text: str) -> str:
+    return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE).strip()
+
+
+def extract_json_candidate(text: str) -> str:
+    json_match = re.search(r'```(?:json)?\s*(.*?)\s*```', text, flags=re.DOTALL | re.IGNORECASE)
+    if json_match:
+        return json_match.group(1)
+
+    first_object = _extract_bracketed_payload(text, '{', '}')
+    if first_object:
+        return first_object
+
+    first_array = _extract_bracketed_payload(text, '[', ']')
+    if first_array:
+        return first_array
+
+    return text
+
+
+def _extract_bracketed_payload(text: str, opener: str, closer: str) -> str | None:
+    start_index = text.find(opener)
+    end_index = text.rfind(closer)
+    if start_index == -1 or end_index == -1 or end_index <= start_index:
+        return None
+    return text[start_index:end_index + 1]
+
+
+def unwrap_payload(payload):
+    current_payload = payload
+
+    while isinstance(current_payload, list) and len(current_payload) == 1:
+        current_payload = current_payload[0]
+
+    while isinstance(current_payload, dict):
+        nested_payload = None
+        for key in ("result", "response", "output", "data", "argument", "verdict", "case_file"):
+            value = current_payload.get(key)
+            if isinstance(value, (dict, list)):
+                nested_payload = value
+                break
+
+        if nested_payload is None:
+            break
+
+        current_payload = nested_payload
+        while isinstance(current_payload, list) and len(current_payload) == 1:
+            current_payload = current_payload[0]
+
+    return current_payload
+
+
+def safe_preview(text: str, limit: int = 600) -> str:
+    preview = text[:limit]
+    return preview.encode("ascii", "backslashreplace").decode("ascii")
 
 def clean_and_parse_json(text: str, model_class: Type[T]) -> T:
     """
@@ -13,39 +70,29 @@ def clean_and_parse_json(text: str, model_class: Type[T]) -> T:
     It cleans up reasoning blocks (<think>), extracts JSON snippets from Markdown,
     and aggressively repairs malformed JSON (missing quotes, trailing commas, unescaped characters).
     """
-    
-    # 1. Strip reasoning blocks (like Minimax's <think> tags)
-    text_cleaned = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE).strip()
-    
-    # 2. Extract JSON from Markdown blocks if present
-    json_match = re.search(r'```(?:json)?\s*(.*?)\s*```', text_cleaned, flags=re.DOTALL | re.IGNORECASE)
-    if json_match:
-        json_str = json_match.group(1)
-    else:
-        json_str = text_cleaned
-        
+
+    text_cleaned = strip_reasoning_blocks(text)
+    json_str = extract_json_candidate(text_cleaned)
+
     try:
-        # 3. Aggressive JSON repair (fixes unescaped quotes, missing brackets, trailing commas)
-        # return_objects=True parses it directly into a Python dict/list
         repaired_data = repair_json(json_str, return_objects=True)
-        
-        if not repaired_data:
+        repaired_data = unwrap_payload(repaired_data)
+
+        if repaired_data in (None, "", [], {}):
             raise ValueError("Repaired JSON is empty or invalid.")
-            
-        if isinstance(repaired_data, list):
-            # Sometimes the LLM wraps the response in a JSON array like [{...}]
-            repaired_data = repaired_data[0]
-            
-        # 4. Instantiate the Pydantic model with the repaired dictionary
-        return model_class(**repaired_data)
-        
+
+        return model_class.model_validate(repaired_data)
+
     except (ValueError, TypeError, ValidationError) as e:
         print(f"\n[PARSER WARNING] Primary parsing/repair failed: {e}\nFalling back to Pydantic Output Parser...")
-        
-        # 5. Last resort fallback to Langchain's Pydantic parser logic
+
         parser = PydanticOutputParser(pydantic_object=model_class)
         try:
-            return parser.invoke(text_cleaned)
+            parsed = parser.invoke(text_cleaned)
+            if isinstance(parsed, BaseModel):
+                return model_class.model_validate(parsed.model_dump())
+            return model_class.model_validate(parsed)
         except Exception as e_fallback:
-            print(f"\n[PARSER ERROR] Fatal parsing failure. Original text:\n{text}\n")
+            preview = safe_preview(text)
+            print(f"\n[PARSER ERROR] Fatal parsing failure. Preview:\n{preview}\n")
             raise e_fallback
