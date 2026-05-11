@@ -25,15 +25,11 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # ── OAuth — Google ────────────────────────────────────────────────────────
-    GOOGLE_CLIENT_ID: str = ""
-    GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8001/api/auth/oauth/google/callback"
+    # GOOGLE_CLIENT_ID: str = ""
+    # GOOGLE_CLIENT_SECRET: str = ""
+    # GOOGLE_REDIRECT_URI: str = "http://localhost:8001/api/auth/oauth/google/callback"
 
-    # ── OAuth — GitHub ────────────────────────────────────────────────────────
-    GITHUB_CLIENT_ID: str = ""
-    GITHUB_CLIENT_SECRET: str = ""
-    GITHUB_REDIRECT_URI: str = "http://localhost:8001/api/auth/oauth/github/callback"
-
+  
     # ── App ───────────────────────────────────────────────────────────────────
     APP_NAME: str = "The Turing Trials"
     DEBUG: bool = False
