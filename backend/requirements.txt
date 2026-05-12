@@ -1,25 +1,35 @@
 # -------------------------------------
 # 1. Core Web Server & API
 # -------------------------------------
-fastapi          
-uvicorn[standard] 
-python-dotenv    
+fastapi
+uvicorn[standard]
+python-dotenv
 
 # -------------------------------------
-# 2. AI & Multi-Agent (LangGraph)
+# 2. Authentication
 # -------------------------------------
-langgraph        
-langchain        
-langchain-openai 
+python-jose[cryptography]   # JWT signing / verification
+passlib[bcrypt]             # password hashing
+bcrypt==4.0.1               # pin: passlib ≥ 4.1 compat bug with bcrypt > 4.0
+pydantic[email]             # EmailStr support (includes email-validator)
+pydantic-settings           # typed settings from .env
+httpx                       # OAuth HTTP calls (Google / GitHub)
 
 # -------------------------------------
-# 3. Database (PostgreSQL)
+# 3. AI & Multi-Agent (LangGraph)
 # -------------------------------------
-sqlalchemy       
-asyncpg          
-alembic          
+langgraph
+langchain
+langchain-openai
 
 # -------------------------------------
-# 4. Game State & Caching
+# 4. Database (PostgreSQL)
+# -------------------------------------
+sqlalchemy
+asyncpg
+alembic
+
+# -------------------------------------
+# 5. Game State & Caching
 # -------------------------------------
 redis

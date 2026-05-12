@@ -1,29 +1,24 @@
 # backend/app/database.py
-import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-# 1. Look for the Docker environment variable FIRST. 
-# If it's not found (like when running locally without Docker), fallback to localhost.
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql+asyncpg://admin:admin@localhost:5432/postgres"
-)
+from app.core.config import settings
 
-# 2. Create the Database Engine
-engine = create_async_engine(DATABASE_URL, echo=True)
+# 1. Engine — URL comes from settings (which reads DATABASE_URL from env)
+engine = create_async_engine(settings.DATABASE_URL, echo=True)
 
-# 3. Create a Session Factory
+# 2. Session factory
 AsyncSessionLocal = sessionmaker(
-    bind=engine, 
-    class_=AsyncSession, 
-    expire_on_commit=False
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
 )
 
-# 4. Create the Base Class
+# 3. Base class shared by all models
 Base = declarative_base()
 
-# 5. Dependency function
+
+# 4. Dependency — yields an async session per request
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
