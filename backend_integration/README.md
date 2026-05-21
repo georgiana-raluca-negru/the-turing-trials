@@ -153,6 +153,39 @@ Behavior:
 - otherwise the interface asks the AI runner to generate the case
 - initial state starts at cycle `1` with `next_actor = prosecution`
 
+Minimal example:
+
+```python
+from backend_integration.interface import create_match
+from backend_integration.models import (
+    ActorConfiguration,
+    ActorController,
+    MatchConfig,
+)
+
+state = create_match(
+    config=MatchConfig(
+        user_prompt="A museum robbery involving tear gas and a forged painting.",
+        max_rounds=3,
+        allow_evidence_reuse=False,
+    ),
+    actors=ActorConfiguration(
+        prosecution=ActorController.AI,
+        defense=ActorController.HUMAN,
+        judge=ActorController.AI,
+    ),
+)
+```
+
+Use this when:
+
+- a match is just being created
+- backend wants the shared layer to generate the case file
+
+Or:
+
+- backend already has a case file and wants to start from that fixed state
+
 ### `progress_match(...)`
 
 Advances the match by exactly one logical step.
@@ -176,6 +209,36 @@ Behavior:
 
 Use this when the backend wants precise control over every step.
 
+Minimal example:
+
+```python
+from backend_integration.interface import progress_match
+
+result = progress_match(state=state)
+state = result.state
+```
+
+Possible returned `action` values from `progress_match(...)`:
+
+- `AI_TURN_COMPLETED`
+  - an AI turn was produced and state advanced
+- `HUMAN_TURN_COMPLETED`
+  - a human debate turn was accepted and state advanced
+- `AWAITING_HUMAN_TURN`
+  - backend must collect a debate turn from the next human actor
+- `AWAITING_HUMAN_VERDICT`
+  - backend must collect a verdict from a human judge
+- `MATCH_COMPLETED`
+  - the debate is terminal and has a verdict
+- `MATCH_QUIT`
+  - the debate is terminal because quit was requested
+
+Important rules:
+
+- do not pass both `human_turn` and `human_verdict`
+- do not pass `human_turn` when next actor is AI
+- do not pass `human_verdict` unless next actor is the judge
+
 ### `progress_until_human_or_terminal(...)`
 
 Auto-advances AI-controlled actors until one of these happens:
@@ -188,13 +251,82 @@ Auto-advances AI-controlled actors until one of these happens:
 Use this when the backend wants to let the AI run until the next user-facing
 pause point.
 
+Minimal example:
+
+```python
+from backend_integration.interface import progress_until_human_or_terminal
+
+result = progress_until_human_or_terminal(state=state)
+state = result.state
+```
+
+This function loops internally until one of these is reached:
+
+- `AWAITING_HUMAN_TURN`
+- `AWAITING_HUMAN_VERDICT`
+- `MATCH_COMPLETED`
+- `MATCH_QUIT`
+
+Use this when:
+
+- backend wants AI turns to auto-run
+- frontend only needs state when a human must act
+- backend wants to minimize orchestration logic in routes/controllers
+
 ### `submit_human_turn(...)`
 
 Convenience wrapper around `progress_match(...)` for a non-judge human turn.
 
+Minimal example:
+
+```python
+from backend_integration.interface import submit_human_turn
+from backend_integration.models import HumanTurnInput
+
+result = submit_human_turn(
+    state=state,
+    human_turn=HumanTurnInput(
+        actor_role=result.waiting_for_actor,
+        text="The witness timeline is inconsistent with the prosecution theory.",
+        attached_evidence_ids=["EVD-DEF-002"],
+    ),
+)
+state = result.state
+```
+
+Validation rules:
+
+- `actor_role` must match the current `next_actor`
+- actor must be configured as `human`
+- at most 2 evidence IDs may be attached
+- attached IDs must be valid for that actor and current reuse rules
+
 ### `submit_human_verdict(...)`
 
 Convenience wrapper around `progress_match(...)` for a human judge verdict.
+
+Minimal example:
+
+```python
+from backend_integration.interface import submit_human_verdict
+from backend_integration.models import HumanJudgeVerdictInput
+
+result = submit_human_verdict(
+    state=state,
+    human_verdict=HumanJudgeVerdictInput(
+        guilty=False,
+        reasoning="The burden of proof was not met.",
+        prosecution_score=6,
+        defense_score=8,
+    ),
+)
+state = result.state
+```
+
+Use this only when:
+
+- `next_actor == judge`
+- judge is configured as `human`
 
 ### `quit_match(...)`
 
@@ -202,14 +334,48 @@ Marks the match as quit and returns a terminal state.
 
 Quitting is first-class. It is not treated as an exceptional crash path.
 
+Minimal example:
+
+```python
+from backend_integration.interface import quit_match
+from backend_integration.models import ActorRole
+
+result = quit_match(
+    state=state,
+    actor_role=ActorRole.DEFENSE,
+    reason="Player left the match.",
+)
+state = result.state
+```
+
+Behavior:
+
+- if match is already completed, result remains completed
+- if match is already quit, result remains quit
+- otherwise state becomes terminal with status `QUIT`
+
 ### `get_match_snapshot(...)`
 
 Returns a deep copy of the current runtime state.
+
+Use this when:
+
+- backend wants a safe copy before persistence or serialization
+- multiple consumers should not mutate the same in-memory object
 
 ### `get_available_evidence(...)`
 
 Returns evidence available to a given role, taking the evidence reuse toggle
 into account.
+
+Minimal example:
+
+```python
+from backend_integration.interface import get_available_evidence
+from backend_integration.models import ActorRole
+
+evidence = get_available_evidence(state=state, role=ActorRole.PROSECUTION)
+```
 
 ## Shared Model Semantics
 
@@ -328,6 +494,178 @@ if result.action == ProgressAction.AWAITING_HUMAN_TURN:
 ```
 
 The backend is free to persist every intermediate state, every turn, or both.
+
+## Full Usage Patterns
+
+### Fully AI-controlled match
+
+Configuration:
+
+- prosecution = AI
+- defense = AI
+- judge = AI
+
+Typical flow:
+
+1. `create_match(...)`
+2. `progress_until_human_or_terminal(...)`
+3. result should usually be `MATCH_COMPLETED`
+4. persist final `state`
+
+This is the simplest orchestration mode.
+
+### Human vs AI match
+
+Configuration example:
+
+- prosecution = HUMAN
+- defense = AI
+- judge = AI
+
+Typical flow:
+
+1. `create_match(...)`
+2. `progress_until_human_or_terminal(...)`
+3. shared layer returns `AWAITING_HUMAN_TURN`
+4. backend collects prosecution input
+5. backend calls `submit_human_turn(...)`
+6. backend calls `progress_until_human_or_terminal(...)` again
+7. repeat until completion
+
+### Human judge flow
+
+Configuration example:
+
+- prosecution = AI
+- defense = AI
+- judge = HUMAN
+
+Typical flow:
+
+1. run normal debate progression
+2. after final defense cycle, shared layer returns `AWAITING_HUMAN_VERDICT`
+3. backend collects judge decision
+4. backend calls `submit_human_verdict(...)`
+5. result becomes `MATCH_COMPLETED`
+
+### All-human match
+
+Configuration:
+
+- prosecution = HUMAN
+- defense = HUMAN
+- judge = HUMAN
+
+Typical flow:
+
+1. `create_match(...)`
+2. state immediately waits for prosecution
+3. backend alternates `submit_human_turn(...)`
+4. after final defense cycle, state waits for human judge verdict
+5. backend calls `submit_human_verdict(...)`
+
+In this mode, the shared layer still provides:
+
+- cycle tracking
+- evidence validation
+- transcript assembly
+- quit handling
+
+## Persistence and Resume Model
+
+The shared layer does not persist state for you. The backend is expected to own
+that.
+
+Recommended pattern:
+
+1. call a shared interface function
+2. receive a new `MatchRuntimeState`
+3. serialize or map it into backend storage
+4. on the next API call, reconstruct or reload that state
+5. pass it back into the next shared interface function
+
+This means resume behavior is backend-controlled.
+
+The current design is intentionally compatible with:
+
+- database persistence
+- session storage
+- in-memory cache
+- document storage for snapshots
+
+## MatchProgressResult Interpretation
+
+Every progression entrypoint returns a `MatchProgressResult`.
+
+Fields:
+
+- `state`
+  - the new canonical state after the step
+- `action`
+  - what happened or what is needed next
+- `latest_turn`
+  - the most recent turn if one was created
+- `waiting_for_actor`
+  - which actor must act next when a human pause occurs
+- `message`
+  - short explanatory message for logs or controller logic
+
+Backend routes should branch primarily on `action`.
+
+Recommended interpretation:
+
+- `AI_TURN_COMPLETED`
+  - state advanced; backend may continue automatically
+- `HUMAN_TURN_COMPLETED`
+  - state advanced from accepted human input; backend may continue automatically
+- `AWAITING_HUMAN_TURN`
+  - stop and request input from `waiting_for_actor`
+- `AWAITING_HUMAN_VERDICT`
+  - stop and request judge verdict input
+- `MATCH_COMPLETED`
+  - terminal success
+- `MATCH_QUIT`
+  - terminal quit state
+
+## Failure Cases and Validation Behavior
+
+The shared layer is designed to fail fast for invalid caller behavior.
+
+Examples of rejected inputs:
+
+- human turn submitted for the wrong actor
+- human turn submitted while next actor is AI
+- human verdict submitted before the judge step
+- both `human_turn` and `human_verdict` provided together
+- evidence IDs invalid for the acting side
+- more than 2 evidence IDs attached
+
+This is intentional. The backend should treat these as contract violations,
+not as normal gameplay outcomes.
+
+## Contract Boundary With the Current AI Demo
+
+The contract layer is real and implemented now. It is not only documentation.
+
+Current responsibility split:
+
+- `backend_integration.interface`
+  - public API surface
+- `backend_integration.services.lifecycle`
+  - actual state machine logic
+- `backend_integration.ports.ai_runner`
+  - injected AI runner contract
+- `backend_integration.adapters.ai_engine`
+  - current adapter to your existing `ai_engine`
+
+That means the shared layer already works for:
+
+- all-human matches
+- mixed human/AI matches
+- fully AI matches
+
+But the default AI path still depends on the current `ai_engine` through the
+adapter.
 
 ## Adapters: Who Adapts What
 
