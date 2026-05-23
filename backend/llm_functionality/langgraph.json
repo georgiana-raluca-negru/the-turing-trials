@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "the_turing_trials": "ai_engine.graph.workflow:app"
+  },
+  "env": ".env"
+}
