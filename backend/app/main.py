@@ -1,5 +1,14 @@
 # backend/app/main.py
 
+import os
+import sys
+
+# Make llm_functionality packages importable (ai_engine, backend_integration)
+# This is needed for local development; in Docker, PYTHONPATH is set in the Dockerfile.
+_LLM_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "llm_functionality")
+if _LLM_DIR not in sys.path:
+    sys.path.insert(0, _LLM_DIR)
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware

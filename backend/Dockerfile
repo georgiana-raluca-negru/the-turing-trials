@@ -13,8 +13,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 5. Copy the rest of your backend code into the container
 COPY . .
 
-# 6. Expose the port FastAPI uses
+# 6. Make llm_functionality packages importable (ai_engine, backend_integration)
+ENV PYTHONPATH="/app/llm_functionality:${PYTHONPATH}"
+
+# 7. Expose the port FastAPI uses
 EXPOSE 8000
 
-# 7. The command to start the server
+# 8. The command to start the server
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

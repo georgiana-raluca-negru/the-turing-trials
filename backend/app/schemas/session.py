@@ -104,3 +104,6 @@ class VerdictOut(BaseModel):
     verdict_reasoning: str
     scales_final: float
     completed_at: datetime
+
+    model_config = {"from_attributes": True}
+
