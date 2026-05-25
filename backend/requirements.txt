@@ -33,3 +33,4 @@ alembic
 # 5. Game State & Caching
 # -------------------------------------
 redis
+json-repair               # robust JSON repair for LLM outputs (used by ai_engine)

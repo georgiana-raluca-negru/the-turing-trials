@@ -54,8 +54,8 @@ async def create_match(
     )
     db.add(match)
 
-    # Increment the user's match counter (denormalised stat for US3)
-    current_user.total_matches += 1
+    # Note: total_matches is incremented when the game session actually starts,
+    # not at match creation time (a LOBBY match hasn't been played yet).
 
     await db.commit()
     await db.refresh(match)

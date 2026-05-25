@@ -29,7 +29,12 @@ class Settings(BaseSettings):
     # GOOGLE_CLIENT_SECRET: str = ""
     # GOOGLE_REDIRECT_URI: str = "http://localhost:8001/api/auth/oauth/google/callback"
 
-  
+
+    # ── LLM / AI Engine ──────────────────────────────────────────────────────
+    OPENAI_API_KEY: str = ""
+    OPENAI_BASE_URL: str = "https://api.minimax.io/v1"
+    DEFAULT_MODEL_NAME: str = "MiniMax-Text-01"
+
     # ── App ───────────────────────────────────────────────────────────────────
     APP_NAME: str = "The Turing Trials"
     DEBUG: bool = False
