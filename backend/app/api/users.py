@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.database import get_db
-from app.models.match import Match, Verdict
+from app.models.match import Match
 from app.models.user import User
 from app.schemas.user import DashboardOut, MatchSummary, UserOut
 

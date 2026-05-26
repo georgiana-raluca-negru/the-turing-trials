@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from backend_integration.models.actors import ActorConfiguration, ActorController, ActorRole
-from backend_integration.models.case_file import CaseFileBundle, EvidenceCard, EvidenceRole
+from backend_integration.models.case_file import CaseFileBundle, EvidenceCard
 from backend_integration.models.match import (
     MatchConfig,
     MatchProgressResult,

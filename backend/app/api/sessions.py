@@ -30,13 +30,10 @@ from app.schemas.session import (
     RoundCreate,
     RoundOut,
     SessionCreate,
-    SessionOut,
     VerdictCreate,
-    VerdictOut,
 )
 from app.services.game_service import (
     get_game_state,
-    progress_game,
     quit_game,
     start_game,
     submit_player_turn,

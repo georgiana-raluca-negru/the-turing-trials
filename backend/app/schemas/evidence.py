@@ -4,7 +4,6 @@ Schemas for the Evidence Inventory (US6, US8, US9, US10).
 """
 
 import uuid
-from datetime import datetime
 
 from pydantic import BaseModel, Field
 

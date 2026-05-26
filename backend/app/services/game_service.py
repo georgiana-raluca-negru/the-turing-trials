@@ -23,17 +23,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend_integration.interface import (
     create_match as bi_create_match,
     get_available_evidence,
-    get_match_snapshot,
     progress_until_human_or_terminal,
     quit_match as bi_quit_match,
     submit_human_turn as bi_submit_human_turn,
     submit_human_verdict as bi_submit_human_verdict,
 )
 from backend_integration.models.actors import ActorConfiguration, ActorController, ActorRole
-from backend_integration.models.case_file import CaseFileBundle, EvidenceCard
+from backend_integration.models.case_file import CaseFileBundle
 from backend_integration.models.match import (
     MatchConfig,
-    MatchProgressResult,
     MatchRuntimeState,
     MatchStatus as BiMatchStatus,
     ProgressAction,

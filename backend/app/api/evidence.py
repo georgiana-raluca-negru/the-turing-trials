@@ -19,7 +19,6 @@ from app.models.evidence import Evidence, EvidenceRole
 from app.models.match import Match, PlayerRole
 from app.models.user import User
 from app.schemas.evidence import EvidenceCardOut
-from app.services.game_service import get_player_evidence
 
 router = APIRouter(prefix="/api/evidence", tags=["Evidence"])
 
