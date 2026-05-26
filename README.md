@@ -162,9 +162,35 @@ docker compose down -v
 
 The application is hosted on an Ubuntu server with Nginx configured as a reverse proxy.
 
-The current live URL is: [http://cine406.go.ro](http://cine406.go.ro)
+The live URL is: [http://the-turing-trials.games](http://the-turing-trials.games)
 
-> A dedicated domain for the application is planned and will replace the current URL once configured.
+### Nginx configuration
+
+Nginx listens on port 80 and routes traffic to the two containers:
+
+- `GET /api/*` → FastAPI backend on `127.0.0.1:8001`
+- Everything else → Next.js frontend on `127.0.0.1:3001`
+
+### Production `.env` values
+
+For a production deployment update your `.env` with the following before rebuilding:
+
+```env
+# Point the browser at the public domain so Nginx can route /api/* to FastAPI
+NEXT_PUBLIC_API_URL=http://the-turing-trials.games
+
+# Use a strong random secret — never use the default placeholder
+JWT_SECRET_KEY=<generate with: openssl rand -hex 32>
+```
+
+After editing `.env`, rebuild and restart the containers:
+
+```bash
+docker compose up --build -d
+```
+
+> **Note:** `NEXT_PUBLIC_API_URL` is baked into the Next.js bundle at build time (Docker build arg).
+> Changing it requires a full rebuild — a container restart alone is not enough.
 
 ---
 
