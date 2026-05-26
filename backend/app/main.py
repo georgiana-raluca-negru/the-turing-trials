@@ -57,7 +57,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://cine406.go.ro:3001",
+        "http://the-turing-trials.games",
+        "http://www.the-turing-trials.games",
+        "https://the-turing-trials.games",
+        "https://www.the-turing-trials.games",
         "http://localhost:3001",
     ],
     allow_credentials=True,
