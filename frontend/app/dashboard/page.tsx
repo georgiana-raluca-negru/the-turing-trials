@@ -98,7 +98,7 @@ export default function DashboardPage() {
           </h2>
           <p className="text-xs font-mono text-purple-500/60 mt-1 uppercase tracking-widest flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />
-            Agent: {data.user.username} // Win Rate: {winRatePct}%
+            Agent: {data.user.username} · Win Rate: {winRatePct}%
           </p>
         </div>
         <Link
@@ -210,7 +210,7 @@ export default function DashboardPage() {
 
         <div className="bg-black/80 p-3 border-t border-purple-500/30 text-right">
           <span className="text-[10px] text-slate-600 uppercase font-mono tracking-widest">
-            Total Matches: {data.total_matches} // End of file
+            Total Matches: {data.total_matches}
           </span>
         </div>
       </div>
