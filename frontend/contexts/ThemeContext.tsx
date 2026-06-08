@@ -23,32 +23,31 @@ export function useTheme() {
   return useContext(ThemeContext);
 }
 
+function applyTheme(t: Theme) {
+  const html = document.documentElement;
+  if (t === "light") {
+    html.classList.remove("dark");
+    html.classList.add("light");
+  } else {
+    html.classList.remove("light");
+    html.classList.add("dark");
+  }
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "dark";
+    return (localStorage.getItem("turing_theme") as Theme | null) ?? "dark";
+  });
 
   useEffect(() => {
-    const stored = localStorage.getItem("turing_theme") as Theme | null;
-    const initial = stored ?? "dark";
-    setTheme(initial);
-    applyTheme(initial);
-  }, []);
-
-  function applyTheme(t: Theme) {
-    const html = document.documentElement;
-    if (t === "light") {
-      html.classList.remove("dark");
-      html.classList.add("light");
-    } else {
-      html.classList.remove("light");
-      html.classList.add("dark");
-    }
-  }
+    applyTheme(theme);
+  }, [theme]);
 
   function toggle() {
     setTheme((prev) => {
       const next: Theme = prev === "dark" ? "light" : "dark";
       localStorage.setItem("turing_theme", next);
-      applyTheme(next);
       return next;
     });
   }
