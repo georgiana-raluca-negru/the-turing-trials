@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Header from "@/components/Header"; // Importăm Header-ul proaspăt creat
+import Header from "@/components/Header";
+import { ToastProvider } from "@/components/ui/Toast";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,17 +31,25 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full flex flex-col bg-black text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200">
-        
-        {/* Folosim componenta noastră dinamică de tip Client */}
-        <Header />
+      {/* Inline theme bootstrap — runs before React hydrates to avoid flash */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('turing_theme')||'dark';document.documentElement.classList.remove('dark','light');document.documentElement.classList.add(t);}catch(e){}`,
+          }}
+        />
+      </head>
 
-        {/* Conținutul paginilor */}
-        <main className="flex-grow flex flex-col bg-slate-950">
-          {children}
-        </main>
+      <body className="min-h-full flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+        <ThemeProvider>
+          <ToastProvider>
+            <Header />
 
-        <div id="toast-container" className="font-mono text-xs"></div>
+            <main className="flex-grow flex flex-col bg-slate-950">
+              {children}
+            </main>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
