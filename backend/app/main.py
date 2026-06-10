@@ -61,6 +61,7 @@ app.add_middleware(
         "http://www.the-turing-trials.games",
         "https://the-turing-trials.games",
         "https://www.the-turing-trials.games",
+        "http://localhost:3000",
         "http://localhost:3001",
     ],
     allow_credentials=True,
