@@ -13,6 +13,7 @@ interface MatchSummary {
   case_summary: string | null;
   status: string;
   verdict: string;
+  match_result: "win" | "loss" | "n/a";
   created_at: string;
 }
 
@@ -25,9 +26,15 @@ interface DashboardData {
 }
 
 const VERDICT_STYLE: Record<string, string> = {
-  NOT_GUILTY: "border-emerald-500/50 text-emerald-400 bg-emerald-500/10",
-  PENDING:    "border-yellow-500/50 text-yellow-400 bg-yellow-500/10",
-  GUILTY:     "border-red-500/50 text-red-400 bg-red-500/10",
+  not_guilty: "border-emerald-500/50 text-emerald-400 bg-emerald-500/10",
+  pending:    "border-yellow-500/50 text-yellow-400 bg-yellow-500/10",
+  guilty:     "border-red-500/50 text-red-400 bg-red-500/10",
+};
+
+const RESULT_STYLE: Record<string, string> = {
+  win:  "border-emerald-500/50 text-emerald-300 bg-emerald-500/10",
+  loss: "border-red-500/50 text-red-300 bg-red-500/10",
+  "n/a":  "border-slate-700 text-slate-500 bg-transparent",
 };
 
 export default function DashboardPage() {
@@ -101,12 +108,20 @@ export default function DashboardPage() {
             Agent: {data.user.username} · Win Rate: {winRatePct}%
           </p>
         </div>
-        <Link
-          href="/setup"
-          className="self-start sm:self-auto text-xs font-mono text-cyan-500 hover:text-cyan-300 uppercase tracking-widest transition-colors border border-cyan-500/30 hover:border-cyan-400 px-3 py-1.5 rounded"
-        >
-          + New Trial
-        </Link>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <Link
+            href="/leaderboard"
+            className="text-xs font-mono text-yellow-500 hover:text-yellow-300 uppercase tracking-widest transition-colors border border-yellow-500/30 hover:border-yellow-400 px-3 py-1.5 rounded"
+          >
+            Leaderboard
+          </Link>
+          <Link
+            href="/setup"
+            className="text-xs font-mono text-cyan-500 hover:text-cyan-300 uppercase tracking-widest transition-colors border border-cyan-500/30 hover:border-cyan-400 px-3 py-1.5 rounded"
+          >
+            + New Trial
+          </Link>
+        </div>
       </div>
 
       {/* Stats strip */}
@@ -136,8 +151,8 @@ export default function DashboardPage() {
                 <th className="p-4 font-bold">Timestamp</th>
                 <th className="p-4 font-bold">Role</th>
                 <th className="p-4 font-bold">Case Summary</th>
-                <th className="p-4 font-bold">Status</th>
                 <th className="p-4 font-bold">Verdict</th>
+                <th className="p-4 font-bold">Result</th>
               </tr>
             </thead>
             <tbody>
@@ -163,10 +178,14 @@ export default function DashboardPage() {
                     <td className="p-4 text-sm text-slate-400 max-w-xs truncate">
                       {match.case_summary ?? "—"}
                     </td>
-                    <td className="p-4 text-xs text-slate-500 uppercase">{match.status}</td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border rounded ${VERDICT_STYLE[match.verdict] ?? VERDICT_STYLE.PENDING}`}>
-                        {match.verdict}
+                      <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border rounded ${VERDICT_STYLE[match.verdict] ?? VERDICT_STYLE["pending"]}`}>
+                        {match.verdict.replace("_", " ")}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border rounded ${RESULT_STYLE[match.match_result] ?? RESULT_STYLE["n/a"]}`}>
+                        {match.match_result}
                       </span>
                     </td>
                   </tr>
@@ -193,9 +212,14 @@ export default function DashboardPage() {
                   <span className="text-[10px] text-slate-500 uppercase tracking-widest">
                     {new Date(match.created_at).toLocaleDateString()}
                   </span>
-                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border rounded ${VERDICT_STYLE[match.verdict] ?? VERDICT_STYLE.PENDING}`}>
-                    {match.verdict}
-                  </span>
+                  <div className="flex gap-1">
+                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border rounded ${VERDICT_STYLE[match.verdict] ?? VERDICT_STYLE["pending"]}`}>
+                      {match.verdict.replace("_", " ")}
+                    </span>
+                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest border rounded ${RESULT_STYLE[match.match_result] ?? RESULT_STYLE["n/a"]}`}>
+                      {match.match_result}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-xs font-bold text-cyan-300 uppercase border-l-2 border-cyan-500 pl-2 mb-1">
                   {match.player_role}

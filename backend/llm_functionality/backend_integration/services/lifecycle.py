@@ -320,8 +320,8 @@ def _validate_human_evidence_selection(
     attached_evidence_ids: list[str],
 ) -> list[str]:
     deduped_ids = list(dict.fromkeys(attached_evidence_ids))
-    if len(deduped_ids) > 2:
-        raise ValueError("At most 2 evidence items may be attached to a turn.")
+    if len(deduped_ids) > 1:
+        raise ValueError("At most 1 evidence item may be attached to a turn.")
 
     allowed_ids = {item.code for item in get_available_evidence_for_role(state, actor_role)}
     invalid_ids = [item for item in deduped_ids if item not in allowed_ids]

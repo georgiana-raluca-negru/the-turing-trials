@@ -6,7 +6,9 @@ Schemas for user profile and dashboard (US3).
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, model_validator
+
+_RANK_K = 5  # Bayesian prior constant — penalises low sample sizes
 
 
 class UserOut(BaseModel):
@@ -32,8 +34,23 @@ class MatchSummary(BaseModel):
     status: str
     created_at: datetime
     completed_at: datetime | None
+    match_result: str = "n/a"   # "win" | "loss" | "n/a"
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def compute_result(self) -> "MatchSummary":
+        if self.player_role == "defense_attorney":
+            if self.verdict == "not_guilty":
+                self.match_result = "win"
+            elif self.verdict == "guilty":
+                self.match_result = "loss"
+        elif self.player_role == "prosecutor":
+            if self.verdict == "guilty":
+                self.match_result = "win"
+            elif self.verdict == "not_guilty":
+                self.match_result = "loss"
+        return self
 
 
 class DashboardOut(BaseModel):
@@ -43,3 +60,17 @@ class DashboardOut(BaseModel):
     total_wins: int
     win_rate: float                   # 0.0 – 1.0
     recent_matches: list[MatchSummary]
+
+
+class LeaderboardEntry(BaseModel):
+    rank: int
+    username: str
+    total_matches: int
+    total_wins: int
+    win_rate: float       # raw 0.0–1.0
+    score: float          # Bayesian score used for ranking
+
+
+class LeaderboardOut(BaseModel):
+    entries: list[LeaderboardEntry]
+    total_players: int

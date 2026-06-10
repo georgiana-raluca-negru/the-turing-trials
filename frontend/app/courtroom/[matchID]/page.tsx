@@ -135,6 +135,7 @@ export default function CourtroomPage({
   const [displayScore, setDisplayScore] = useState(50);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [argumentBuffer, setArgumentBuffer] = useState("");
+  const [verdictChoice, setVerdictChoice] = useState<"guilty" | "not_guilty" | null>(null);
   const [mobilePanelTab, setMobilePanelTab] = useState<"chat" | "case" | "evidence">("chat");
 
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -248,6 +249,9 @@ export default function CourtroomPage({
       setAttachedEvidence(null);
       applyGameState(state, match.player_role);
 
+      const updatedCards = await apiJson<EvidenceCard[]>(`/api/evidence/${matchID}`);
+      setEvidence(evidenceToItems(updatedCards));
+
       if (state.verdict) {
         const label =
           state.verdict.guilty === true
@@ -260,6 +264,34 @@ export default function CourtroomPage({
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to submit argument.";
       showToast(`Transmission error: ${msg}`, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  /* ── Submit judge verdict ─────────────────────────────────────────────── */
+  async function handleSubmitVerdict() {
+    if (!verdictChoice || !argumentBuffer.trim() || isSubmitting || !match) return;
+    setIsSubmitting(true);
+
+    try {
+      const state = await apiJson<GameState>(`/api/sessions/${matchID}/verdict`, {
+        method: "POST",
+        body: JSON.stringify({
+          verdict: verdictChoice,
+          verdict_reasoning: argumentBuffer.trim(),
+        }),
+      });
+
+      setArgumentBuffer("");
+      setVerdictChoice(null);
+      applyGameState(state, match.player_role);
+
+      const label = verdictChoice === "guilty" ? "GUILTY" : "NOT GUILTY";
+      showToast(`Verdict delivered: ${label}`, "info");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to submit verdict.";
+      showToast(`Verdict error: ${msg}`, "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -302,12 +334,6 @@ export default function CourtroomPage({
     spectator: "SPECTATOR",
   };
 
-  const aiRoleLabel =
-    match.player_role === "defense_attorney"
-      ? "PROSECUTOR_AGENT"
-      : match.player_role === "prosecutor"
-      ? "DEFENSE_AGENT"
-      : "AI_AGENT";
 
   const caseSummaryText = gameState.case_summary
     ? `${gameState.case_summary.crime}: ${gameState.case_summary.charges.join(", ")}`
@@ -336,24 +362,31 @@ export default function CourtroomPage({
   }) {
     const isUser = msg.role === "user";
     const isJudge = msg.role === "judge";
+    const isProsecution = msg.role === "prosecutor";
 
     const bubbleClass = isJudge
       ? "bg-yellow-950/20 border border-yellow-500/20 max-w-full"
       : isUser
       ? "bg-cyan-950/20 border border-cyan-500/20 max-w-[92%] ml-auto"
+      : isProsecution
+      ? "bg-red-950/20 border border-red-500/20 max-w-[92%]"
       : "bg-purple-950/20 border border-purple-500/20 max-w-[92%]";
 
     const labelColor = isJudge
       ? "text-yellow-400"
       : isUser
       ? "text-cyan-400"
+      : isProsecution
+      ? "text-red-400"
       : "text-purple-400";
 
     const label = isJudge
       ? "[ AI_JUDGE ]"
       : isUser
       ? `[ ${roleLabel[playerRole] ?? "COUNSEL"} (YOU) ]`
-      : `[ ${aiRoleLabel} ]`;
+      : isProsecution
+      ? "[ PROSECUTOR_AGENT ]"
+      : "[ DEFENSE_AGENT ]";
 
     return (
       <div className={`p-3 sm:p-4 rounded-lg font-mono text-xs ${bubbleClass}`}>
@@ -389,6 +422,84 @@ export default function CourtroomPage({
   /* ── Render ───────────────────────────────────────────────────────────── */
   return (
     <div className="flex flex-col h-[calc(100vh-56px)] sm:h-[calc(100vh-65px)] bg-slate-950 overflow-hidden relative">
+
+      {/* ── End-of-game overlay ── */}
+      {isCompleted && gameState.verdict && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-slate-900 border rounded-lg shadow-2xl font-mono overflow-hidden
+            border-cyan-500/30 shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+
+            {/* Header bar */}
+            <div className={`px-6 py-4 border-b ${
+              gameState.verdict.guilty === true
+                ? "border-red-500/30 bg-red-950/30"
+                : gameState.verdict.guilty === false
+                ? "border-emerald-500/30 bg-emerald-950/30"
+                : "border-yellow-500/30 bg-yellow-950/30"
+            }`}>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Trial Concluded</p>
+              <h2 className={`text-2xl font-black uppercase tracking-widest ${
+                gameState.verdict.guilty === true
+                  ? "text-red-400"
+                  : gameState.verdict.guilty === false
+                  ? "text-emerald-400"
+                  : "text-yellow-400"
+              }`}>
+                Verdict: {gameState.verdict.guilty === true ? "Guilty" : gameState.verdict.guilty === false ? "Not Guilty" : "Pending"}
+              </h2>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              {/* Case summary */}
+              {caseSummaryText && (
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Case</p>
+                  <p className="text-xs text-slate-300">{caseSummaryText}</p>
+                </div>
+              )}
+
+              {/* Role + rounds */}
+              <div className="flex gap-6 text-xs">
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5">Your Role</p>
+                  <p className="text-slate-200 font-bold uppercase">{roleLabel[match.player_role] ?? match.player_role}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-0.5">Rounds Played</p>
+                  <p className="text-slate-200 font-bold">{gameState.current_round} / {gameState.max_rounds}</p>
+                </div>
+              </div>
+
+              {/* Reasoning */}
+              {gameState.verdict.reasoning && (
+                <div>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">Judge&apos;s Reasoning</p>
+                  <p className="text-xs text-slate-400 leading-relaxed max-h-32 overflow-y-auto pr-1">
+                    {gameState.verdict.reasoning}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 py-4 border-t border-slate-800 flex gap-3">
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded border border-purple-500/50 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 transition-all cursor-pointer"
+              >
+                View Archives
+              </button>
+              <button
+                onClick={() => router.push("/setup")}
+                className="flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded border border-cyan-500/50 text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 transition-all cursor-pointer"
+              >
+                New Trial
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Scales of Justice bar */}
       <div className="w-full px-4 py-2 border-b border-cyan-500/10 bg-black/40 backdrop-blur-sm shrink-0 z-10">
@@ -460,7 +571,7 @@ export default function CourtroomPage({
             {isSubmitting && (
               <div className="p-3 bg-purple-950/20 border border-purple-500/20 rounded-lg max-w-[60%] font-mono text-xs">
                 <span className="text-purple-400 text-[10px] uppercase tracking-widest">
-                  {aiRoleLabel} is deliberating
+                  {match.player_role === "defense_attorney" ? "PROSECUTOR_AGENT" : match.player_role === "prosecutor" ? "DEFENSE_AGENT" : "AI_AGENT"} is deliberating
                 </span>
                 <div className="flex gap-1 mt-2">
                   {[0, 1, 2].map((i) => (
@@ -544,63 +655,116 @@ export default function CourtroomPage({
 
           {/* Input area */}
           <div className="p-3 sm:p-4 border-t border-slate-900 bg-black/30 backdrop-blur-sm shrink-0">
-            <div className="relative">
-              <div className="absolute left-3 top-3 font-mono text-xs text-cyan-500/40 select-none">
-                &gt;
+            {isMyTurn && gameState.status === "awaiting_human_verdict" ? (
+              /* ── Judge verdict UI ── */
+              <div className="space-y-3">
+                <p className="text-[10px] font-mono text-yellow-400/70 uppercase tracking-widest">
+                  &gt; Deliver your verdict
+                </p>
+                <div className="flex gap-3">
+                  {(["guilty", "not_guilty"] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setVerdictChoice(v)}
+                      disabled={isSubmitting}
+                      className={`flex-1 py-2 font-mono text-xs font-bold uppercase tracking-widest rounded border transition-all cursor-pointer ${
+                        verdictChoice === v
+                          ? v === "guilty"
+                            ? "bg-red-500/20 border-red-400 text-red-300"
+                            : "bg-emerald-500/20 border-emerald-400 text-emerald-300"
+                          : "bg-transparent border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-300"
+                      }`}
+                    >
+                      {v === "guilty" ? "Guilty" : "Not Guilty"}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  value={argumentBuffer}
+                  onChange={(e) => setArgumentBuffer(e.target.value)}
+                  className="w-full p-3 bg-black/60 border border-slate-800 rounded text-slate-300 font-mono text-xs focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 outline-none resize-none shadow-inner placeholder:text-slate-700"
+                  placeholder="State your reasoning… (min 20 characters)"
+                  rows={3}
+                  disabled={isSubmitting}
+                />
+                <button
+                  onClick={handleSubmitVerdict}
+                  disabled={isSubmitting || !verdictChoice || argumentBuffer.trim().length < 20}
+                  className={`w-full py-2.5 font-mono text-xs font-bold uppercase tracking-widest rounded border transition-all cursor-pointer ${
+                    isSubmitting || !verdictChoice || argumentBuffer.trim().length < 20
+                      ? "border-slate-800 text-slate-600 bg-transparent cursor-not-allowed"
+                      : "bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 border-yellow-500/50 hover:border-yellow-400"
+                  }`}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-3 h-3 border-2 border-yellow-500/30 border-t-yellow-400 rounded-full animate-spin" />
+                      Delivering verdict…
+                    </span>
+                  ) : (
+                    "Deliver Verdict"
+                  )}
+                </button>
               </div>
-              <textarea
-                value={argumentBuffer}
-                onChange={(e) => setArgumentBuffer(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey))
-                    handleSubmitArgument();
-                }}
-                className="w-full pl-7 p-3 bg-black/60 border border-slate-800 rounded text-slate-300 font-mono text-xs focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none resize-none shadow-inner placeholder:text-slate-700"
-                placeholder={
-                  isCompleted
-                    ? "Trial concluded."
-                    : isSubmitting
-                    ? "Transmitting…"
-                    : isMyTurn
-                    ? "Draft legal argument… (Ctrl+Enter to submit)"
-                    : "Awaiting opponent's argument…"
-                }
-                rows={3}
-                disabled={isSubmitting || isCompleted || !isMyTurn}
-              />
-            </div>
-
-            <div className="mt-2 flex justify-between items-center gap-2">
-              <span className="text-[10px] font-mono text-slate-600 uppercase shrink-0">
-                {isCompleted
-                  ? "TRIAL_COMPLETE"
-                  : isSubmitting
-                  ? "TRANSMITTING…"
-                  : isMyTurn
-                  ? "Mode: BROADCAST_READY"
-                  : "Mode: READ_ONLY"}
-              </span>
-              <button
-                onClick={handleSubmitArgument}
-                disabled={
-                  isSubmitting || isCompleted || !argumentBuffer.trim() || !isMyTurn
-                }
-                className={`px-4 sm:px-6 py-2 font-mono text-xs font-bold uppercase tracking-wider rounded border transition-all cursor-pointer ${
-                  isSubmitting || isCompleted || !argumentBuffer.trim() || !isMyTurn
-                    ? "border-slate-800 text-slate-600 bg-transparent cursor-not-allowed"
-                    : "border-cyan-500 text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.1)]"
-                }`}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
-                    Transmitting
+            ) : (
+              /* ── Normal argument UI ── */
+              <>
+                <div className="relative">
+                  <div className="absolute left-3 top-3 font-mono text-xs text-cyan-500/40 select-none">
+                    &gt;
+                  </div>
+                  <textarea
+                    value={argumentBuffer}
+                    onChange={(e) => setArgumentBuffer(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey))
+                        handleSubmitArgument();
+                    }}
+                    className="w-full pl-7 p-3 bg-black/60 border border-slate-800 rounded text-slate-300 font-mono text-xs focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none resize-none shadow-inner placeholder:text-slate-700"
+                    placeholder={
+                      isCompleted
+                        ? "Trial concluded."
+                        : isSubmitting
+                        ? "Transmitting…"
+                        : isMyTurn
+                        ? "Draft legal argument… (Ctrl+Enter to submit)"
+                        : "Awaiting opponent's argument…"
+                    }
+                    rows={3}
+                    disabled={isSubmitting || isCompleted || !isMyTurn}
+                  />
+                </div>
+                <div className="mt-2 flex justify-between items-center gap-2">
+                  <span className="text-[10px] font-mono text-slate-600 uppercase shrink-0">
+                    {isCompleted
+                      ? "TRIAL_COMPLETE"
+                      : isSubmitting
+                      ? "TRANSMITTING…"
+                      : isMyTurn
+                      ? "Mode: BROADCAST_READY"
+                      : "Mode: READ_ONLY"}
                   </span>
-                ) : (
-                  "Transmit"
-                )}
-              </button>
-            </div>
+                  <button
+                    onClick={handleSubmitArgument}
+                    disabled={isSubmitting || isCompleted || !argumentBuffer.trim() || !isMyTurn}
+                    className={`px-4 sm:px-6 py-2 font-mono text-xs font-bold uppercase tracking-wider rounded border transition-all cursor-pointer ${
+                      isSubmitting || isCompleted || !argumentBuffer.trim() || !isMyTurn
+                        ? "border-slate-800 text-slate-600 bg-transparent cursor-not-allowed"
+                        : "border-cyan-500 text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.1)]"
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-3 h-3 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
+                        Transmitting
+                      </span>
+                    ) : (
+                      "Transmit"
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </section>
 

@@ -37,7 +37,7 @@ def prosecutor_turn_node(state: MatchState) -> dict:
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are the Prosecutor in a courtroom trial. Your goal is to prove the defendant guilty.\n"
                    "You MUST base your arguments ONLY on the available evidence provided below. "
-                   "DO NOT invent new evidence. You may attach 0 to 2 evidence items to your argument using their IDs.\n"
+                   "DO NOT invent new evidence. You may attach exactly 0 or 1 evidence item to your argument using its ID.\n"
                    "{evidence_rule}\n"
                    "Keep the argument concise, specific, and under 220 words.\n\n"
                    "Case Context:\n{case_summary}\n\n"
