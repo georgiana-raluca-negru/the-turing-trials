@@ -157,6 +157,42 @@ export default function CourtroomPage({
   const chatEndRef = useRef<HTMLDivElement>(null);
   const spectatingActive = useRef(false);
 
+  /* ── Apply updated game state from API response ───────────────────────── */
+  function applyGameState(state: GameState, playerRole: string, currentEvidence: EvidenceItem[]) {
+    setGameState(state);
+    setDisplayScore(toDisplayScore(state.scales_value ?? 0));
+    setMessages(transcriptToMessages(state.transcript, playerRole, currentEvidence));
+    setEvidence((prev) =>
+      prev.map((e) => {
+        const usedInTranscript = state.transcript.some((t) =>
+          t.evidence_ids.includes(e.title),
+        );
+        return usedInTranscript ? { ...e, used: true } : e;
+      }),
+    );
+  }
+
+  /* ── Spectator/judge turn-by-turn polling ─────────────────────────────── */
+  async function startSpectatorLoop(playerRole: string, initialEvidence: EvidenceItem[]) {
+    spectatingActive.current = true;
+    setIsSpectating(true);
+    while (spectatingActive.current) {
+      try {
+        const state = await apiJson<GameState>(`/api/sessions/${matchID}/advance`, { method: "POST" });
+        if (!spectatingActive.current) break;
+        applyGameState(state, playerRole, initialEvidence);
+        if (state.status === "completed" || state.status === "awaiting_human_verdict" || state.status === "quit") break;
+        await new Promise((r) => setTimeout(r, 400));
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Stream error";
+        showToast(`Stream interrupted: ${msg}`, "error");
+        break;
+      }
+    }
+    spectatingActive.current = false;
+    setIsSpectating(false);
+  }
+
   /* ── Load match + start/resume session ────────────────────────────────── */
   useEffect(() => {
     const load = async () => {
@@ -222,51 +258,14 @@ export default function CourtroomPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchID]);
 
-  /* ── Spectator/judge turn-by-turn polling ─────────────────────────────── */
-  async function startSpectatorLoop(playerRole: string, initialEvidence: EvidenceItem[]) {
-    spectatingActive.current = true;
-    setIsSpectating(true);
-    while (spectatingActive.current) {
-      try {
-        const state = await apiJson<GameState>(`/api/sessions/${matchID}/advance`, { method: "POST" });
-        if (!spectatingActive.current) break;
-        applyGameState(state, playerRole, initialEvidence);
-        if (state.status === "completed" || state.status === "awaiting_human_verdict" || state.status === "quit") break;
-        await new Promise((r) => setTimeout(r, 400));
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Stream error";
-        showToast(`Stream interrupted: ${msg}`, "error");
-        break;
-      }
-    }
-    spectatingActive.current = false;
-    setIsSpectating(false);
-  }
-
   useEffect(() => {
     return () => { spectatingActive.current = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Auto-scroll ──────────────────────────────────────────────────────── */
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  /* ── Apply updated game state from API response ───────────────────────── */
-  function applyGameState(state: GameState, playerRole: string, currentEvidence: EvidenceItem[]) {
-    setGameState(state);
-    setDisplayScore(toDisplayScore(state.scales_value ?? 0));
-    setMessages(transcriptToMessages(state.transcript, playerRole, currentEvidence));
-    setEvidence((prev) =>
-      prev.map((e) => {
-        const usedInTranscript = state.transcript.some((t) =>
-          t.evidence_ids.includes(e.title),
-        );
-        return usedInTranscript ? { ...e, used: true } : e;
-      }),
-    );
-  }
 
   /* ── Attach evidence ──────────────────────────────────────────────────── */
   function handleAttach(id: string | number) {

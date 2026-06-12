@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem("turing_access_token"));
-  }, []);
+  const [isLoggedIn] = useState(
+    () => typeof window !== "undefined" && !!localStorage.getItem("turing_access_token"),
+  );
 
   return (
     <div className="flex flex-col items-center flex-grow bg-[#ECE5DD] min-h-[calc(100vh-57px)]">
