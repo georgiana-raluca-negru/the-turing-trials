@@ -25,7 +25,6 @@ from app.models.game_session import GameSession
 from app.models.round import Round
 from app.models.user import User
 from app.schemas.session import (
-    ObjectionResponse,
     RoundCreate,
     RoundOut,
     SessionCreate,
