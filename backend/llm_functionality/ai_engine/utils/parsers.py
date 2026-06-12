@@ -64,6 +64,19 @@ def safe_preview(text: str, limit: int = 600) -> str:
     preview = text[:limit]
     return preview.encode("ascii", "backslashreplace").decode("ascii")
 
+_SCHEMA_META_KEYS = frozenset({
+    "$defs", "$schema", "$id", "$ref",
+    "additionalProperties", "allOf", "anyOf", "oneOf",
+    "definitions", "properties", "required", "title", "type",
+    "description",
+})
+
+
+def _strip_schema_meta(data: dict) -> dict:
+    """Remove JSON Schema structural keys that an LLM may accidentally include."""
+    return {k: v for k, v in data.items() if k not in _SCHEMA_META_KEYS}
+
+
 def clean_and_parse_json(text: str, model_class: Type[T]) -> T:
     """
     Robust JSON parser specifically designed to handle LLM output issues.
@@ -81,7 +94,19 @@ def clean_and_parse_json(text: str, model_class: Type[T]) -> T:
         if repaired_data in (None, "", [], {}):
             raise ValueError("Repaired JSON is empty or invalid.")
 
-        return model_class.model_validate(repaired_data)
+        # Direct validation
+        if not isinstance(repaired_data, dict):
+            return model_class.model_validate(repaired_data)
+
+        try:
+            return model_class.model_validate(repaired_data)
+        except ValidationError:
+            # MiniMax sometimes returns the JSON schema definition merged with the
+            # actual data in one object. Strip schema meta-keys and retry.
+            stripped = _strip_schema_meta(repaired_data)
+            if stripped and stripped != repaired_data:
+                return model_class.model_validate(stripped)
+            raise
 
     except (ValueError, TypeError, ValidationError) as e:
         print(f"\n[PARSER WARNING] Primary parsing/repair failed: {e}\nFalling back to Pydantic Output Parser...")

@@ -27,7 +27,12 @@ export async function apiJson<T>(
   const res = await apiFetch(path, options);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail ?? `HTTP ${res.status}`);
+    const detail = Array.isArray(err.detail)
+      ? err.detail.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join(", ")
+      : typeof err.detail === "string"
+      ? err.detail
+      : `HTTP ${res.status}`;
+    throw new Error(detail);
   }
   return res.json() as Promise<T>;
 }

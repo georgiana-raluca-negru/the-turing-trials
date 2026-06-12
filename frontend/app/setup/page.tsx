@@ -65,39 +65,36 @@ export default function SetupMatchPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto w-full p-4 sm:p-6 mt-6 sm:mt-10 min-h-[calc(100vh-120px)] flex flex-col justify-center relative">
+    <div className="max-w-2xl mx-auto w-full p-4 sm:p-6 mt-6 sm:mt-10 min-h-[calc(100vh-57px)] flex flex-col justify-center">
 
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-cyan-900/10 blur-[100px] -z-10 rounded-full" />
-
-      <div className="mb-8 border-b border-cyan-500/20 pb-4 flex justify-between items-end">
+      <div className="mb-6 flex justify-between items-end">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-200">
+          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-[#075E54]">
             Configure Protocol
           </h2>
-          <p className="text-xs font-mono text-cyan-500/60 mt-1 uppercase tracking-widest">
-            Module: Case_Initialization_Sequence
+          <p className="text-xs font-mono text-[#667781] mt-1 uppercase tracking-widest">
+            Case Initialization Sequence
           </p>
         </div>
-        <Link href="/" className="text-xs font-mono text-slate-500 hover:text-red-400 uppercase tracking-widest transition-colors shrink-0 ml-4">
+        <Link href="/" className="text-xs font-mono text-[#667781] hover:text-red-500 uppercase tracking-widest transition-colors shrink-0 ml-4">
           [ Abort ]
         </Link>
       </div>
 
       <form
         onSubmit={handleInitiateProtocol}
-        className="space-y-6 bg-slate-900/60 backdrop-blur-md p-6 sm:p-8 rounded-lg border border-cyan-500/30 shadow-[0_0_30px_rgba(0,0,0,0.8)]"
+        className="space-y-6 bg-white rounded-2xl p-6 sm:p-8 border border-[#D1D7DB] shadow-md"
       >
         {/* Case prompt */}
-        <div className="relative group">
-          <label htmlFor="casePrompt" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-cyan-300">
+        <div className="group">
+          <label htmlFor="casePrompt" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-[#075E54]">
             &gt; Core Case Parameters (1–2 sentences)
           </label>
-          <div className="absolute left-0 top-9 bottom-7 w-1 bg-cyan-500/20 group-focus-within:bg-cyan-400 transition-colors" />
           <textarea
             id="casePrompt"
             value={playerPrompt}
             onChange={(e) => setPlayerPrompt(e.target.value)}
-            className="w-full pl-6 p-4 bg-black/50 border border-slate-700/50 rounded-r-md text-slate-200 font-sans text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none resize-none shadow-inner placeholder:text-slate-600 transition-all"
+            className="w-full p-4 bg-[#F0F2F5] border border-[#D1D7DB] rounded-xl text-[#111B21] font-sans text-sm focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none resize-none transition-all placeholder:text-[#667781]/60"
             placeholder="e.g., An AI algorithm deleted a company's financial archive to prevent a simulated market collapse…"
             rows={4}
             required
@@ -107,65 +104,64 @@ export default function SetupMatchPage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Role */}
-          <div className="relative group">
-            <label htmlFor="roleSelect" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-purple-300">
+          <div>
+            <label htmlFor="roleSelect" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-[#075E54]">
               &gt; Assign User Role
             </label>
             <select
               id="roleSelect"
               value={playerRole}
               onChange={(e) => setPlayerRole(e.target.value)}
-              className="w-full p-4 bg-black/50 border border-slate-700/50 rounded-md text-slate-200 font-mono text-sm focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none cursor-pointer"
+              className="w-full p-4 bg-[#F0F2F5] border border-[#D1D7DB] rounded-xl text-[#111B21] font-mono text-sm focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none cursor-pointer"
               disabled={isSubmitting}
             >
-              <option value="defense_attorney">DEFENSE_ATTORNEY</option>
-              <option value="prosecutor">PROSECUTOR</option>
-              <option value="judge">JUDGE (AI_SPECTATOR)</option>
+              <option value="defense_attorney">Defense Attorney</option>
+              <option value="prosecutor">Prosecutor</option>
+              <option value="judge">Judge (Spectator)</option>
             </select>
           </div>
 
           {/* Rounds */}
           <div>
-            <label htmlFor="roundsSelect" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-slate-400">
+            <label htmlFor="roundsSelect" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-[#667781]">
               &gt; Simulation Depth (Max Rounds)
             </label>
             <select
               id="roundsSelect"
               value={maxRounds}
               onChange={(e) => setMaxRounds(Number(e.target.value))}
-              className="w-full p-4 bg-black/50 border border-slate-700/50 rounded-md text-slate-200 font-mono text-sm focus:ring-1 focus:ring-slate-500 outline-none cursor-pointer"
+              className="w-full p-4 bg-[#F0F2F5] border border-[#D1D7DB] rounded-xl text-[#111B21] font-mono text-sm focus:ring-2 focus:ring-[#25D366] outline-none cursor-pointer"
               disabled={isSubmitting}
             >
-              <option value={3}>3 ROUNDS (FAST_MODE)</option>
-              <option value={5}>5 ROUNDS (STANDARD)</option>
-              <option value={10}>10 ROUNDS (DEEP_ANALYSIS)</option>
+              <option value={3}>3 Rounds — Fast</option>
+              <option value={5}>5 Rounds — Standard</option>
+              <option value={10}>10 Rounds — Deep Analysis</option>
             </select>
           </div>
         </div>
 
         {/* Submit */}
-        <div className="pt-4">
+        <div className="pt-2">
           <button
             type="submit"
             disabled={isSubmitting || !playerPrompt.trim()}
-            className={`w-full py-4 font-mono font-bold uppercase tracking-[0.2em] border rounded-md transition-all duration-300 relative overflow-hidden cursor-pointer ${
+            className={`w-full py-4 font-mono font-bold uppercase tracking-[0.2em] rounded-xl transition-all duration-200 ${
               isSubmitting || !playerPrompt.trim()
-                ? "border-slate-800 text-slate-600 bg-transparent cursor-not-allowed"
-                : "bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border-cyan-500/50 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]"
+                ? "bg-[#D1D7DB] text-white cursor-not-allowed"
+                : "bg-[#25D366] text-white hover:bg-[#128C7E] shadow-[0_2px_12px_rgba(37,211,102,0.35)] cursor-pointer"
             }`}
           >
             <span className="flex items-center justify-center gap-3">
               {isSubmitting ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   Computing Neural Matrix…
                 </>
               ) : (
                 <>
                   Generate Simulation
-                  <span className="text-xs bg-cyan-500 text-slate-950 px-2 py-0.5 rounded-sm">INIT_PROT</span>
                 </>
               )}
             </span>

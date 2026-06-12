@@ -582,6 +582,15 @@ async def _sync_transcript_to_db(
         db.add(round_obj)
 
     # Also persist the full transcript as JSON on the session
+    _code_to_title: dict[str, str] = {}
+    if runtime_state.case_file:
+        for _card in (
+            runtime_state.case_file.prosecution_evidence
+            + runtime_state.case_file.defense_evidence
+            + runtime_state.case_file.shared_evidence
+        ):
+            _code_to_title[_card.code] = _card.title
+
     transcript_data = [
         {
             "turn_index": t.turn_index,
@@ -589,7 +598,7 @@ async def _sync_transcript_to_db(
             "actor": t.actor_role.value,
             "controller": t.controller.value,
             "text": t.text,
-            "evidence_ids": t.attached_evidence_ids,
+            "evidence_ids": [_code_to_title.get(code, code) for code in t.attached_evidence_ids[:1]],
             "skipped": t.skipped,
         }
         for t in runtime_state.transcript
@@ -672,6 +681,15 @@ def _build_game_state_response(
         BiMatchStatus.QUIT: "quit",
     }
 
+    code_to_evidence: dict[str, dict[str, str]] = {}
+    if runtime_state.case_file:
+        for _card in (
+            runtime_state.case_file.prosecution_evidence
+            + runtime_state.case_file.defense_evidence
+            + runtime_state.case_file.shared_evidence
+        ):
+            code_to_evidence[_card.code] = {"title": _card.title, "desc": _card.description}
+
     transcript = [
         {
             "turn_index": t.turn_index,
@@ -679,7 +697,12 @@ def _build_game_state_response(
             "actor": t.actor_role.value,
             "controller": t.controller.value,
             "text": t.text,
-            "evidence_ids": t.attached_evidence_ids,
+            "evidence_ids": [code_to_evidence.get(code, {}).get("title", code) for code in t.attached_evidence_ids[:1]],
+            "evidence_used": [
+                code_to_evidence[code]
+                for code in t.attached_evidence_ids[:1]
+                if code in code_to_evidence
+            ],
             "skipped": t.skipped,
             "system_note": t.system_note,
         }

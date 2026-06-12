@@ -20,9 +20,9 @@ interface LeaderboardData {
 }
 
 const RANK_STYLE: Record<number, string> = {
-  1: "text-yellow-400 font-black",
-  2: "text-slate-300 font-bold",
-  3: "text-amber-600 font-bold",
+  1: "text-amber-600 font-black",
+  2: "text-slate-500 font-bold",
+  3: "text-amber-800 font-bold",
 };
 
 export default function LeaderboardPage() {
@@ -38,28 +38,28 @@ export default function LeaderboardPage() {
   }, []);
 
   return (
-    <div className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 min-h-[calc(100vh-120px)] flex flex-col gap-6">
+    <div className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-8 min-h-[calc(100vh-57px)] flex flex-col gap-6 bg-[#ECE5DD]">
 
       {/* Header */}
-      <div className="border-b border-yellow-500/20 pb-4 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
+      <div className="border-b border-[#D1D7DB] pb-4 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400">
+          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-[#075E54]">
             Global Leaderboard
           </h2>
-          <p className="text-xs font-mono text-yellow-500/60 mt-1 uppercase tracking-widest">
+          <p className="text-xs font-mono text-[#667781] mt-1 uppercase tracking-widest">
             Ranked by win score · volume + consistency required
           </p>
         </div>
         <Link
           href="/dashboard"
-          className="self-start sm:self-auto text-xs font-mono text-slate-500 hover:text-cyan-400 uppercase tracking-widest transition-colors border border-slate-700 hover:border-cyan-500/40 px-3 py-1.5 rounded"
+          className="self-start sm:self-auto text-xs font-mono text-[#667781] hover:text-[#075E54] uppercase tracking-widest transition-colors border border-[#D1D7DB] hover:border-[#128C7E] px-3 py-1.5 rounded-lg bg-white"
         >
           ← Archives
         </Link>
       </div>
 
       {/* Scoring note */}
-      <div className="bg-slate-900/40 border border-yellow-500/10 rounded-lg px-4 py-3 font-mono text-[10px] text-slate-500 uppercase tracking-widest">
+      <div className="bg-white border border-[#D1D7DB] rounded-xl px-4 py-3 font-mono text-[10px] text-[#667781] uppercase tracking-widest shadow-sm">
         Score = wins ÷ (matches + 5) · judges and spectators are excluded from ranking
       </div>
 
@@ -69,16 +69,16 @@ export default function LeaderboardPage() {
           <Spinner label="Loading rankings…" />
         </div>
       ) : error ? (
-        <p className="text-red-400 font-mono text-sm text-center uppercase tracking-wider">{error}</p>
+        <p className="text-red-600 font-mono text-sm text-center uppercase tracking-wider bg-red-50 border border-red-300 rounded-xl p-4">{error}</p>
       ) : !data || data.entries.length === 0 ? (
-        <p className="text-slate-500 font-mono text-xs text-center uppercase tracking-widest py-12">
+        <p className="text-[#667781] font-mono text-xs text-center uppercase tracking-widest py-12">
           No ranked players yet. Play a match first.
         </p>
       ) : (
-        <div className="bg-slate-900/40 backdrop-blur-sm rounded-lg border border-yellow-500/20 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-[#D1D7DB] overflow-hidden shadow-sm">
           <table className="w-full text-left border-collapse font-mono">
             <thead>
-              <tr className="bg-black/60 border-b border-yellow-500/20 text-[10px] text-yellow-300/70 uppercase tracking-wider">
+              <tr className="bg-[#075E54] text-white text-xs uppercase tracking-wider">
                 <th className="p-4 font-bold w-12">#</th>
                 <th className="p-4 font-bold">Agent</th>
                 <th className="p-4 font-bold text-right">Matches</th>
@@ -91,21 +91,21 @@ export default function LeaderboardPage() {
               {data.entries.map((entry) => (
                 <tr
                   key={entry.username}
-                  className="border-b border-slate-800/50 hover:bg-yellow-500/5 transition-colors"
+                  className="border-b border-[#F0F2F5] hover:bg-[#F0F2F5] transition-colors"
                 >
-                  <td className={`p-4 text-sm ${RANK_STYLE[entry.rank] ?? "text-slate-600"}`}>
+                  <td className={`p-4 text-sm ${RANK_STYLE[entry.rank] ?? "text-[#667781]"}`}>
                     {entry.rank <= 3 ? ["", "🥇", "🥈", "🥉"][entry.rank] : entry.rank}
                   </td>
-                  <td className="p-4 text-sm font-bold text-slate-200 uppercase tracking-wide">
+                  <td className="p-4 text-sm font-bold text-[#111B21] uppercase tracking-wide">
                     {entry.username}
                   </td>
-                  <td className="p-4 text-sm text-slate-400 text-right">{entry.total_matches}</td>
-                  <td className="p-4 text-sm text-emerald-400 text-right font-bold">{entry.total_wins}</td>
-                  <td className="p-4 text-sm text-slate-300 text-right">
+                  <td className="p-4 text-sm text-[#667781] text-right">{entry.total_matches}</td>
+                  <td className="p-4 text-sm text-emerald-600 text-right font-bold">{entry.total_wins}</td>
+                  <td className="p-4 text-sm text-[#111B21] text-right">
                     {Math.round(entry.win_rate * 100)}%
                   </td>
                   <td className="p-4 text-right">
-                    <span className="text-xs font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 rounded">
+                    <span className="text-xs font-bold text-[#075E54] bg-[#DCF8C6] border border-[#A8D9AC] px-2 py-0.5 rounded-md">
                       {(entry.score * 100).toFixed(1)}
                     </span>
                   </td>
@@ -113,8 +113,8 @@ export default function LeaderboardPage() {
               ))}
             </tbody>
           </table>
-          <div className="bg-black/80 p-3 border-t border-yellow-500/20 text-right">
-            <span className="text-[10px] text-slate-600 uppercase font-mono tracking-widest">
+          <div className="bg-[#F0F2F5] p-3 border-t border-[#D1D7DB] text-right">
+            <span className="text-[10px] text-[#667781] uppercase font-mono tracking-widest">
               {data.total_players} ranked player{data.total_players !== 1 ? "s" : ""}
             </span>
           </div>

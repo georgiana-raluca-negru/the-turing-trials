@@ -29,7 +29,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       {/* Inline theme bootstrap — runs before React hydrates to avoid flash */}
       <head>
@@ -40,12 +40,12 @@ export default function RootLayout({
         />
       </head>
 
-      <body className="min-h-full flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
+      <body className="min-h-full flex flex-col selection:bg-[#25D366]/30 selection:text-[#075E54]">
         <ThemeProvider>
           <ToastProvider>
             <Header />
 
-            <main className="flex-grow flex flex-col bg-slate-950">
+            <main className="flex-grow flex flex-col bg-[#ECE5DD]">
               {children}
             </main>
           </ToastProvider>

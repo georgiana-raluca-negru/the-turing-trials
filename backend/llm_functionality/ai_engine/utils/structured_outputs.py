@@ -182,7 +182,7 @@ def render_history(messages: list[Argument]) -> str:
         return "The trial has just begun."
 
     return "\n".join(
-        f"{message.speaker}: {message.text} (Ev:{message.attached_evidence_ids})"
+        f"{message.speaker}: {message.text}"
         for message in messages
     )
 

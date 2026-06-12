@@ -92,14 +92,34 @@ def progress_match_state(
 
     runner = ai_runner or _get_default_ai_runner()
     ai_result = runner.run_actor_turn(state=state, actor_role=state.next_actor)
+
+    # Hard enforcement: max 1 evidence per AI turn, no reuse
+    ai_turn = ai_result.turn
+    if ai_turn.attached_evidence_ids:
+        available_codes = {card.code for card in get_available_evidence_for_role(state, ai_turn.actor_role)}
+        valid_ids = [c for c in ai_turn.attached_evidence_ids if c in available_codes][:1]
+        if valid_ids != list(ai_turn.attached_evidence_ids):
+            enforced_case_file = _mark_evidence_used_for_human_turn(
+                case_file=state.case_file,
+                actor_role=ai_turn.actor_role,
+                evidence_ids=valid_ids,
+                turn_index=ai_turn.turn_index,
+            )
+            ai_turn = ai_turn.model_copy(update={"attached_evidence_ids": valid_ids})
+            enforced_updated_case_file = enforced_case_file
+        else:
+            enforced_updated_case_file = ai_result.updated_case_file
+    else:
+        enforced_updated_case_file = ai_result.updated_case_file
+
     updated_state = state.model_copy(
         update={
-            "case_file": ai_result.updated_case_file,
-            "transcript": state.transcript + [ai_result.turn],
+            "case_file": enforced_updated_case_file,
+            "transcript": state.transcript + [ai_turn],
             "system_events": state.system_events + ai_result.system_events,
         }
     )
-    updated_state = _advance_after_turn(updated_state, ai_result.turn.actor_role)
+    updated_state = _advance_after_turn(updated_state, ai_turn.actor_role)
     updated_state = _refresh_wait_status(updated_state)
     return MatchProgressResult(
         state=updated_state,
@@ -108,9 +128,9 @@ def progress_match_state(
             if updated_state.status == MatchStatus.COMPLETED
             else ProgressAction.AI_TURN_COMPLETED
         ),
-        latest_turn=ai_result.turn,
+        latest_turn=ai_turn,
         waiting_for_actor=updated_state.next_actor if updated_state.status != MatchStatus.COMPLETED else None,
-        message=f"AI {ai_result.turn.actor_role.value} turn completed.",
+        message=f"AI {ai_turn.actor_role.value} turn completed.",
     )
 
 
