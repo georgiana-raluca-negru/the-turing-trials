@@ -33,6 +33,7 @@ from app.schemas.session import (
     VerdictCreate,
 )
 from app.services.game_service import (
+    advance_one_ai_turn,
     get_game_state,
     quit_game,
     start_game,
@@ -201,6 +202,38 @@ async def submit_turn(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+# ── POST /api/sessions/{match_id}/advance — Spectator turn-by-turn ───────────
+
+@router.post(
+    "/{match_id}/advance",
+    summary="Advance one AI turn — for spectator/judge roles watching the debate live",
+)
+async def advance_turn(
+    match_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Process exactly one AI turn and return the updated game state.
+    The frontend calls this in a loop for spectator and judge roles so that
+    messages appear one at a time rather than all at once.
+    """
+    result = await db.execute(
+        select(Match).where(
+            Match.id == match_id,
+            Match.player_id == current_user.id,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
+
+    try:
+        game_state = await advance_one_ai_turn(match_id, db)
+        return game_state
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # ── POST /api/sessions/{match_id}/objection — Objection mechanic ─────────────

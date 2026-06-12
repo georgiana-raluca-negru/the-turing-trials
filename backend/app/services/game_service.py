@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend_integration.interface import (
     create_match as bi_create_match,
     get_available_evidence,
+    progress_match as bi_progress_one_turn,
     progress_until_human_or_terminal,
     quit_match as bi_quit_match,
     submit_human_turn as bi_submit_human_turn,
@@ -154,21 +155,19 @@ async def start_game(match: Match, db: AsyncSession) -> dict[str, Any]:
     await db.commit()
     await db.refresh(session)
 
-    # 6. Auto-progress AI turns until a pause point
-    result = progress_until_human_or_terminal(state=runtime_state)
-    runtime_state = result.state
-
-    # 7. Sync any AI-generated rounds back to DB
-    await _sync_transcript_to_db(session.id, runtime_state, db)
-    await _sync_session_state(session, runtime_state, db)
-
-    # 8. If match completed (spectator mode), finalize
-    if result.action == ProgressAction.MATCH_COMPLETED:
-        await _finalize_match(match, runtime_state, db)
+    # 6. For judge/spectator roles the frontend drives turn-by-turn via /advance.
+    #    For playing roles, auto-progress until the human needs to act.
+    if match.player_role not in {PlayerRole.JUDGE, PlayerRole.SPECTATOR}:
+        result = progress_until_human_or_terminal(state=runtime_state)
+        runtime_state = result.state
+        await _sync_transcript_to_db(session.id, runtime_state, db)
+        await _sync_session_state(session, runtime_state, db)
+        if result.action == ProgressAction.MATCH_COMPLETED:
+            await _finalize_match(match, runtime_state, db)
 
     await db.commit()
 
-    # 9. Save runtime state to in-memory store
+    # 7. Save runtime state to in-memory store
     game_store.save(match_id_str, runtime_state)
 
     return _build_game_state_response(match, session, runtime_state)
@@ -368,6 +367,45 @@ async def quit_game(match_id: uuid.UUID, db: AsyncSession) -> dict[str, Any]:
 
 
 # ── Get game state ────────────────────────────────────────────────────────────
+
+async def advance_one_ai_turn(match_id: uuid.UUID, db: AsyncSession) -> dict[str, Any]:
+    """
+    Process exactly one AI turn for spectator/judge modes.
+    The frontend calls this repeatedly to drive the match turn-by-turn.
+    Returns the updated game state after the turn completes.
+    If the match is already waiting for human input or is complete, returns
+    the current state unchanged.
+    """
+    match_id_str = str(match_id)
+    runtime_state = game_store.get(match_id_str)
+    if runtime_state is None:
+        raise ValueError(f"No active game session for match {match_id}")
+
+    match = await db.get(Match, match_id)
+    if match is None:
+        raise ValueError(f"Match {match_id} not found")
+
+    session_result = await db.execute(
+        select(GameSession).where(GameSession.match_id == match_id)
+    )
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise ValueError(f"No GameSession for match {match_id}")
+
+    result = bi_progress_one_turn(state=runtime_state)
+    runtime_state = result.state
+
+    await _sync_transcript_to_db(session.id, runtime_state, db)
+    await _sync_session_state(session, runtime_state, db)
+
+    if result.action == ProgressAction.MATCH_COMPLETED:
+        await _finalize_match(match, runtime_state, db)
+
+    await db.commit()
+    game_store.save(match_id_str, runtime_state)
+
+    return _build_game_state_response(match, session, runtime_state)
+
 
 async def get_game_state(match_id: uuid.UUID, db: AsyncSession) -> dict[str, Any]:
     """Return the current game state for API response."""

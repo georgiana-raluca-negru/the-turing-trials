@@ -47,6 +47,7 @@ interface GameState {
   player_role: string;
   current_round: number;
   max_rounds: number;
+  current_turn: string | null;
   scales_value: number;
   case_summary: { crime: string; charges: string[]; background_story: string } | null;
   transcript: TranscriptEntry[];
@@ -150,8 +151,10 @@ export default function CourtroomPage({
   const [mobilePanelTab, setMobilePanelTab] = useState<"chat" | "case" | "evidence">("chat");
   const [verdictOverlayDismissed, setVerdictOverlayDismissed] = useState(false);
   const [abandonConfirm, setAbandonConfirm] = useState(false);
+  const [isSpectating, setIsSpectating] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const spectatingActive = useRef(false);
 
   /* ── Load match + start/resume session ────────────────────────────────── */
   useEffect(() => {
@@ -200,6 +203,12 @@ export default function CourtroomPage({
         const items = evidenceToItems(cards);
         setEvidence(items);
         setMessages(transcriptToMessages(state.transcript, matchData.player_role, items));
+
+        // 4. For judge/spectator, drive turns one-at-a-time so the debate appears live
+        const isWatcher = matchData.player_role === "judge" || matchData.player_role === "spectator";
+        if (isWatcher && state.status === "in_progress") {
+          startSpectatorLoop(matchData.player_role, items);
+        }
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Failed to load courtroom.";
         setError(msg);
@@ -211,6 +220,32 @@ export default function CourtroomPage({
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchID]);
+
+  /* ── Spectator/judge turn-by-turn polling ─────────────────────────────── */
+  async function startSpectatorLoop(playerRole: string, initialEvidence: EvidenceItem[]) {
+    spectatingActive.current = true;
+    setIsSpectating(true);
+    while (spectatingActive.current) {
+      try {
+        const state = await apiJson<GameState>(`/api/sessions/${matchID}/advance`, { method: "POST" });
+        if (!spectatingActive.current) break;
+        applyGameState(state, playerRole, initialEvidence);
+        if (state.status === "completed" || state.status === "awaiting_human_verdict" || state.status === "quit") break;
+        await new Promise((r) => setTimeout(r, 400));
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Stream error";
+        showToast(`Stream interrupted: ${msg}`, "error");
+        break;
+      }
+    }
+    spectatingActive.current = false;
+    setIsSpectating(false);
+  }
+
+  useEffect(() => {
+    return () => { spectatingActive.current = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── Auto-scroll ──────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -676,7 +711,9 @@ export default function CourtroomPage({
             {messages.length === 0 && (
               <div className="flex items-center justify-center h-full">
                 <p className="font-mono text-[#667781] text-xs uppercase tracking-widest text-center">
-                  Trial initializing… submit your opening argument.
+                  {match.player_role === "spectator" || match.player_role === "judge"
+                    ? "Trial initializing… the court is in session."
+                    : "Trial initializing… submit your opening argument."}
                 </p>
               </div>
             )}
@@ -690,11 +727,14 @@ export default function CourtroomPage({
               />
             ))}
 
-            {/* AI computing indicator (while submit in flight) */}
-            {isSubmitting && (
+            {/* AI computing indicator */}
+            {(isSubmitting || isSpectating) && (
               <div className="p-3 bg-white border border-[#D1D7DB] rounded-lg max-w-[60%] font-mono text-xs shadow-sm">
                 <span className="text-[#667781] text-[10px] uppercase tracking-widest">
-                  {match.player_role === "defense_attorney" ? "Prosecutor AI" : match.player_role === "prosecutor" ? "Defense AI" : "AI Agent"} is deliberating
+                  {isSpectating
+                    ? (gameState.current_turn === "prosecution" ? "Prosecutor AI" : gameState.current_turn === "defense" ? "Defense AI" : "Judge AI") + " is deliberating"
+                    : (match.player_role === "defense_attorney" ? "Prosecutor AI" : match.player_role === "prosecutor" ? "Defense AI" : "AI Agent") + " is deliberating"
+                  }
                 </span>
                 <div className="flex gap-1 mt-2">
                   {[0, 1, 2].map((i) => (
@@ -777,7 +817,23 @@ export default function CourtroomPage({
 
           {/* Input area */}
           <div className="p-3 sm:p-4 border-t border-[#D1D7DB] bg-[#F0F2F5] shrink-0">
-            {isMyTurn && gameState.status === "awaiting_human_verdict" ? (
+            {match.player_role === "spectator" ? (
+              /* ── Pure spectator — no input ever ── */
+              <div className="text-center py-2">
+                <p className="text-[10px] font-mono text-[#667781] uppercase tracking-widest flex items-center justify-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isCompleted ? "bg-[#667781]" : "bg-[#25D366] animate-pulse"}`} />
+                  {isCompleted ? "Trial concluded — spectator view" : "Spectating live — no input required"}
+                </p>
+              </div>
+            ) : match.player_role === "judge" && gameState.status !== "awaiting_human_verdict" && !isCompleted ? (
+              /* ── Judge watching debate ── */
+              <div className="text-center py-2">
+                <p className="text-[10px] font-mono text-amber-700 uppercase tracking-widest flex items-center justify-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+                  {isSpectating ? "Observing the debate — verdict phase incoming" : "Debate concluded — deliver your verdict above"}
+                </p>
+              </div>
+            ) : isMyTurn && gameState.status === "awaiting_human_verdict" ? (
               /* ── Judge verdict UI ── */
               <div className="space-y-3">
                 <p className="text-[10px] font-mono text-amber-700 uppercase tracking-widest">

@@ -119,7 +119,8 @@ export default function SetupMatchPage() {
             >
               <option value="defense_attorney">Defense Attorney</option>
               <option value="prosecutor">Prosecutor</option>
-              <option value="judge">Judge (Spectator)</option>
+              <option value="judge">Judge — Deliver the Verdict</option>
+              <option value="spectator">Spectator — Watch Only</option>
             </select>
           </div>
 
