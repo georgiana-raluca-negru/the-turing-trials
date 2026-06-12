@@ -641,13 +641,16 @@ async def _get_evidence_code(
         return None
 
     if runtime_state and runtime_state.case_file:
-        # Search all evidence lists for a card with a matching title
-        all_cards = (
-            runtime_state.case_file.prosecution_evidence
-            + runtime_state.case_file.defense_evidence
-            + runtime_state.case_file.shared_evidence
-        )
-        for card in all_cards:
+        # Scope the search to the card's own role so a title collision between
+        # prosecution and defense evidence never returns the wrong code.
+        if evidence.assigned_role == EvidenceRole.DEFENSE:
+            search_cards = runtime_state.case_file.defense_evidence
+        elif evidence.assigned_role == EvidenceRole.PROSECUTION:
+            search_cards = runtime_state.case_file.prosecution_evidence
+        else:
+            search_cards = runtime_state.case_file.shared_evidence
+
+        for card in search_cards:
             if card.title == evidence.title:
                 return card.code
 
