@@ -1,20 +1,18 @@
 @import "tailwindcss";
 
-/* ── Dark/Light theme via class on <html> ────────────────────────────────── */
-/* Default (dark — cyberpunk) */
+/* ── WhatsApp-inspired palette ───────────────────────────────────────────── */
 :root {
-  --bg-base:    2 6 23;        /* slate-950 */
-  --bg-surface: 15 23 42;      /* slate-900 */
-  --text-base:  248 250 252;   /* slate-50  */
-  --border-sub: 30 41 59;      /* slate-800 */
+  --bg-base:    236 229 221;   /* #ECE5DD warm beige */
+  --bg-surface: 240 242 245;   /* #F0F2F5 panel bg   */
+  --text-base:  17  27  33;    /* #111B21 dark text   */
+  --border-sub: 209 215 219;   /* #D1D7DB light gray  */
 }
 
-/* Light override */
 html.light {
-  --bg-base:    248 250 252;   /* slate-50  */
-  --bg-surface: 241 245 249;   /* slate-100 */
-  --text-base:  15 23 42;      /* slate-900 */
-  --border-sub: 203 213 225;   /* slate-300 */
+  --bg-base:    240 242 245;
+  --bg-surface: 255 255 255;
+  --text-base:  17  27  33;
+  --border-sub: 209 215 219;
 }
 
 body {
@@ -23,33 +21,10 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Light mode: frame chrome overrides (header + outer shell only;
-   courtroom content intentionally stays dark) */
-html.light header {
-  background-color: rgba(248, 250, 252, 0.9) !important;
-  border-color: rgba(100, 116, 139, 0.3) !important;
-}
-
-html.light header h1,
-html.light header nav a,
-html.light header nav span {
-  color: rgb(15 23 42);
-}
-
-html.light main {
-  background-color: rgb(248, 250, 252) !important;
-}
-
 /* ── Toast slide-in animation ────────────────────────────────────────────── */
 @keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translateX(110%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(110%); }
+  to   { opacity: 1; transform: translateX(0);    }
 }
 
 .toast-in {
@@ -59,19 +34,9 @@ html.light main {
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgb(51 65 85) transparent;
+  scrollbar-color: #D1D7DB transparent;
 }
 
-*::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  background-color: rgb(51 65 85);
-  border-radius: 3px;
-}
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track  { background: transparent; }
+*::-webkit-scrollbar-thumb  { background-color: #D1D7DB; border-radius: 3px; }

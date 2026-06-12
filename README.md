@@ -15,6 +15,7 @@
 
 - [Project Overview](#project-overview)
 - [Key Features](#key-features)
+- [How to Play](#how-to-play)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Local Setup](#local-setup)
@@ -28,47 +29,102 @@
 
 **The Turing Trials** is a gamified web application that simulates a courtroom environment using a **multi-agent Large Language Model (LLM) architecture**. Rather than a simple chatbot, the platform orchestrates a turn-based legal battle where human players and autonomous AI agents take on the roles of **Defense Attorney**, **Prosecutor**, and **Judge**.
 
-The core innovation is the **AI Clerk Agent**, which dynamically generates structured case files (JSON) from a short user prompt. To prevent hallucinations, the prosecuting and defending agents are strictly constrained to argue using only the generated **Evidence Inventory**. Players must strategically attach evidence cards to their arguments and can trigger an **Objection** mechanic to interrupt flawed AI reasoning in real-time. Each match concludes with an objective verdict from the AI Judge, and results are persisted to the user's match history.
+The core innovation is the **AI Clerk Agent**, which dynamically generates a complete, structured case file from a single 1–2 sentence prompt. To prevent hallucinations, the prosecution and defense agents are strictly constrained to argue using only the generated **Evidence Inventory**. Players strategically attach evidence cards to their arguments and can trigger a one-time **Objection** to challenge a flawed AI argument. Each match concludes with a motivated verdict from the AI Judge, and all results are persisted to the player's match history.
 
 ---
 
 ## Key Features
 
-- **AI Clerk** — generates complete, structured case files from a 1-2 sentence prompt
+- **AI Clerk** — generates a complete structured case file (crime, charges, background story, evidence) from a 1–2 sentence prompt
 - **Multi-role gameplay** — play as Defense Attorney, Prosecutor, Judge, or Spectator
-- **Evidence Inventory** — role-specific evidence cards that must be attached to arguments
-- **Objection Mechanic** — interrupt opponent's AI text generation with a live counter-argument
-- **Scales of Justice** — real-time visual progress bar updated after each round by the AI Judge
-- **Match History** — persistent per-user record of roles, verdicts, and case summaries
-- **Authentication** — email/password and OAuth (Google / GitHub)
+- **Evidence Inventory** — role-specific evidence cards that must be attached to arguments; each card can only be used once
+- **Objection Mechanic** — one-time challenge button that forces the opponent's AI to address a disputed argument head-on in their next turn
+- **Scales of Justice** — visual progress bar that tilts toward prosecution or defense after the AI Judge scores each round
+- **Spectator & Judge modes** — watch the full AI debate unfold turn-by-turn, or observe and then deliver your own verdict
+- **Match History & Leaderboard** — persistent per-user record of roles, verdicts, win rate, and a global ranking board
+- **Authentication** — secure email/password registration and login with JWT tokens
+
+---
+
+## How to Play
+
+### 1. Create an account and log in
+
+Register with your email and password. Your match history and win rate are saved to your profile.
+
+### 2. Set up a trial
+
+On the **Setup** page, provide:
+
+- **Case prompt** — one or two sentences describing the scenario (e.g. *"An AI algorithm deleted a company's financial archive to prevent a simulated market collapse."*)
+- **Your role** — choose how you want to participate (see roles below)
+- **Number of rounds** — 3 (fast), 5 (standard), or 10 (deep analysis)
+
+The AI Clerk generates the full case file — crime summary, charges, background story, and a set of evidence cards for each side — before the trial begins.
+
+### 3. Choose your role
+
+| Role | What you do |
+|---|---|
+| **Defense Attorney** | Argue that the defendant is not guilty. The prosecution is played by AI. |
+| **Prosecutor** | Build the case for guilt. The defense is played by AI. |
+| **Judge** | Watch the full AI debate, then deliver your own written verdict at the end. |
+| **Spectator** | Watch the entire trial unfold automatically with no input required. |
+
+### 4. The courtroom
+
+The courtroom is a three-panel layout:
+
+- **Left panel** — case summary (crime, charges, background story) and match status
+- **Centre panel** — the debate chat, where arguments appear turn by turn
+- **Right panel** — your Evidence Folder
+
+Each side (prosecution / defense) argues in alternating turns. AI turns are generated automatically; when it is your turn the input area becomes active.
+
+### 5. Evidence
+
+Your Evidence Folder shows the cards assigned to your role. Each card has a title and a description. To submit a valid argument:
+
+1. Click a card in the Evidence Folder to attach it
+2. Write your argument in the text box
+3. Submit — the card is marked as used and is no longer available
+
+Each evidence card can only be used once per session. AI opponents follow the same rule.
+
+### 6. Objection
+
+Each side has **one objection** available per match. The **Objection!** button appears during your turn (after the opponent has just spoken). Use it when you believe the opponent's last argument is irrelevant or misleading.
+
+When raised, the court logs the objection and the opponent's AI **must address it directly** before making any new points on their next turn. There is no text to write — it is a one-click action. The button permanently disappears after use.
+
+### 7. Scales of Justice
+
+After each round the AI Judge silently evaluates both sides and updates the **Scales of Justice** bar at the top of the screen. Green = defense advantage, red = prosecution advantage. The bar animates on every update so you can track momentum in real time.
+
+### 8. Verdict
+
+After all rounds are completed:
+
+- If you are playing as **Defense Attorney or Prosecutor**, the AI Judge delivers a written verdict (Guilty / Not Guilty) with a reasoning summary and scores for both sides.
+- If you are playing as **Judge**, you write your own verdict and reasoning after watching the debate. Your decision is saved as the official result.
+- If you are a **Spectator**, the AI Judge delivers the verdict automatically.
+
+The result is saved to your match history and counts toward your win rate on the leaderboard.
 
 ---
 
 ## Tech Stack
 
-### Current
-
 | Layer | Technology |
 |---|---|
-| **Frontend** | Next.js 14+, React, TypeScript, CSS Modules |
-| **Backend** | Python, FastAPI, SQLAlchemy (async) |
+| **Frontend** | Next.js 14, React, TypeScript, Tailwind CSS |
+| **Backend** | Python 3.12, FastAPI, SQLAlchemy (async) |
 | **Database** | PostgreSQL 16 |
-| **AI / LLM** | Multi-agent LLM orchestration (AI Clerk, Defense, Prosecution, Judge agents) |
+| **AI / LLM** | MiniMax-Text-01 via OpenAI-compatible API; LangChain for multi-agent orchestration (AI Clerk, Prosecutor, Defense, Judge) |
+| **Authentication** | JWT (python-jose / passlib), HTTP-only bearer tokens |
 | **Containerization** | Docker, Docker Compose |
 | **CI/CD** | GitHub Actions |
 | **Server** | Ubuntu Server, Nginx (reverse proxy) |
-
-### Planned
-
-| Layer | Technology | Purpose |
-|---|---|---|
-| **Authentication** | Auth.js (NextAuth.js), python-jose / passlib | Google & GitHub OAuth, JWT token handling |
-| **Real-time Communication** | WebSockets (FastAPI native), Socket.IO | Live objection mechanic, Scales of Justice updates |
-| **LLM Orchestration** | LangChain / LangGraph + Streaming API | Multi-agent turn management, streamed text generation |
-| **LLM Provider** | OpenAI / Anthropic / Google Gemini | Powering all AI agents (Clerk, Defense, Prosecution, Judge) |
-| **Database Migrations** | Alembic | Safe schema versioning for SQLAlchemy models |
-| **Frontend State** | Zustand / Redux Toolkit, TanStack Query | Global courtroom state, server-state caching |
-| **Testing** | pytest, pytest-asyncio, Jest, React Testing Library, Playwright | Unit, integration & end-to-end tests |
 
 ---
 
@@ -77,12 +133,21 @@ The core innovation is the **AI Clerk Agent**, which dynamically generates struc
 ```
 the-turing-trials/
 ├── .github/
-│   └── workflows/          # CI/CD pipelines
-├── backend/                # FastAPI application (Python)
-├── frontend/               # Next.js application (TypeScript)
-├── docs/                   # Project documentation
-├── docker-compose.yml      # Multi-service orchestration
-├── .env.example            # Environment variable template
+│   └── workflows/              # CI/CD pipelines
+├── backend/
+│   ├── app/
+│   │   ├── api/                # FastAPI route handlers
+│   │   ├── models/             # SQLAlchemy ORM models
+│   │   ├── schemas/            # Pydantic request/response schemas
+│   │   └── services/           # Business logic layer
+│   └── llm_functionality/
+│       ├── ai_engine/          # LLM agents (Clerk, Prosecutor, Defense, Judge)
+│       └── backend_integration/# Runtime state machine and AI adapter
+├── frontend/
+│   ├── app/                    # Next.js App Router pages
+│   └── components/             # Reusable UI components
+├── docker-compose.yml
+├── .env.example
 └── README.md
 ```
 
@@ -92,65 +157,72 @@ the-turing-trials/
 
 ### Prerequisites
 
-Make sure you have the following installed on your machine:
-
 - [Docker](https://docs.docker.com/get-docker/) & [Docker Compose](https://docs.docker.com/compose/install/) (v2+)
 - [Git](https://git-scm.com/)
+- An API key for an OpenAI-compatible LLM provider (the project ships configured for MiniMax-Text-01)
 
-### 1. Clone the Repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/georgiana-raluca-negru/the-turing-trials.git
 cd the-turing-trials
 ```
 
-### 2. Configure Environment Variables
-
-Copy the example environment file and fill in your values:
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and update the following variables:
+Open `.env` and fill in your values:
 
 ```env
-# --- DATABASE CONFIG ---
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_local_password_here
-POSTGRES_DB=turing_db
+# Database
+POSTGRES_USER=turing
+POSTGRES_PASSWORD=your_password_here
+POSTGRES_DB=turing
 
-# --- FRONTEND CONFIG ---
-# For local dev, the browser accesses the backend on localhost:8001
+# Frontend — browser address for the backend API
 NEXT_PUBLIC_API_URL=http://localhost:8001
+
+# Auth
+JWT_SECRET_KEY=<generate with: openssl rand -hex 32>
+
+# LLM provider (OpenAI-compatible)
+OPENAI_API_KEY=your_api_key_here
+OPENAI_BASE_URL=https://api.minimax.io/v1
+DEFAULT_MODEL_PROVIDER=minimax
+DEFAULT_MODEL_NAME=MiniMax-Text-01
 ```
 
-### 3. Start the Application
+### 3. Start the application
 
 ```bash
 docker compose up --build
 ```
 
-This will spin up three services:
+This starts three containers:
 
-| Service | Container | Exposed Port |
+| Container | Service | Port |
 |---|---|---|
-| PostgreSQL 16 | `turing-db` | internal only |
-| FastAPI Backend | `turing-backend` | `http://localhost:8001` |
-| Next.js Frontend | `turing-frontend` | `http://localhost:3001` |
+| `turing-db` | PostgreSQL 16 | internal only |
+| `turing-backend` | FastAPI | `http://localhost:8001` |
+| `turing-frontend` | Next.js | `http://localhost:3001` |
 
-### 4. Access the App
+The database schema is created automatically on first startup.
 
-- **Frontend:** [http://localhost:3001](http://localhost:3001)
-- **Backend API / Docs:** [http://localhost:8001/docs](http://localhost:8001/docs)
+### 4. Open the app
 
-### 5. Stopping the Application
+- **App:** [http://localhost:3001](http://localhost:3001)
+- **API docs (Swagger):** [http://localhost:8001/docs](http://localhost:8001/docs)
+
+### 5. Stop the application
 
 ```bash
 docker compose down
 ```
 
-To also remove the persisted database volume:
+To also delete the database volume (all data):
 
 ```bash
 docker compose down -v
@@ -160,37 +232,29 @@ docker compose down -v
 
 ## Deployment
 
-The application is hosted on an Ubuntu server with Nginx configured as a reverse proxy.
+The application is deployed on an Ubuntu server with Nginx as a reverse proxy.
 
-The live URL is: [http://the-turing-trials.games](http://the-turing-trials.games)
+**Live URL:** [http://the-turing-trials.games](http://the-turing-trials.games)
 
-### Nginx configuration
-
-Nginx listens on port 80 and routes traffic to the two containers:
+### Nginx routing
 
 - `GET /api/*` → FastAPI backend on `127.0.0.1:8001`
 - Everything else → Next.js frontend on `127.0.0.1:3001`
 
-### Production `.env` values
-
-For a production deployment update your `.env` with the following before rebuilding:
+### Production `.env`
 
 ```env
-# Point the browser at the public domain so Nginx can route /api/* to FastAPI
 NEXT_PUBLIC_API_URL=http://the-turing-trials.games
-
-# Use a strong random secret — never use the default placeholder
-JWT_SECRET_KEY=<generate with: openssl rand -hex 32>
+JWT_SECRET_KEY=<strong random secret>
 ```
 
-After editing `.env`, rebuild and restart the containers:
+After editing `.env`, rebuild:
 
 ```bash
 docker compose up --build -d
 ```
 
-> **Note:** `NEXT_PUBLIC_API_URL` is baked into the Next.js bundle at build time (Docker build arg).
-> Changing it requires a full rebuild — a container restart alone is not enough.
+> `NEXT_PUBLIC_API_URL` is baked into the Next.js bundle at build time. A container restart alone is not enough — a full rebuild is required when this value changes.
 
 ---
 
@@ -198,90 +262,71 @@ docker compose up --build -d
 
 ### Authentication & User Account
 
-| ID | Story |
-|---|---|
-| US1 | As a visitor, I want to register using my email and password (or via Google/GitHub), **so that** I can have a dedicated profile on the platform. |
-| US2 | As an authenticated user, I want to securely log out, **so that** I can protect my personal data on shared devices. |
-| US3 | As a user, I want a Dashboard showing my match history (role played, case summary, verdict, date), **so that** I can track my progress and overall win rate. |
+| ID | Status | Story |
+|---|---|---|
+| US1 | Partial | As a visitor, I want to register using my email and password, **so that** I can have a dedicated profile. *(OAuth via Google/GitHub is not yet implemented.)* |
+| US2 | Done | As an authenticated user, I want to securely log out, **so that** I can protect my data on shared devices. |
+| US3 | Done | As a user, I want a Dashboard showing my match history (role, case summary, verdict, date) and a global leaderboard, **so that** I can track my performance. |
 
 ### AI Clerk & Match Setup
 
-| ID | Story |
-|---|---|
-| US4 | As a player, I want to input a short prompt (1-2 sentences) describing the trial idea, **so that** I can provide a starting point for the case generation engine. |
-| US5 | As a player, I want to select my role (Defense Attorney, Prosecutor, Judge, or Spectator), **so that** I can determine my level of interaction in the trial. |
-| US6 | As a player, I want evidence distributed only to my appropriate role (e.g., Defense only sees defense evidence), **so that** strategic competition and surprise are maintained. |
+| ID | Status | Story |
+|---|---|---|
+| US4 | Done | As a player, I want to input a short prompt describing the trial idea, **so that** I can provide a starting point for case generation. |
+| US5 | Done | As a player, I want to select my role (Defense Attorney, Prosecutor, Judge, or Spectator), **so that** I can determine my level of interaction. |
+| US6 | Done | As a player, I want evidence distributed only to my role, **so that** strategic competition and surprise are maintained. |
 
 ### Courtroom UI & Evidence Inventory
 
-| ID | Story |
-|---|---|
-| US7 | As a player, I want a fixed summary of the case (Crime and Charges) always visible, **so that** I don't lose track of essential details during debates. |
-| US8 | As a playing attorney/prosecutor, I want a visual "Evidence Folder" displaying cards I can consult, **so that** I can build my trial strategy. |
-| US9 | As a player, I want to select an evidence card and attach it to my argument draft, **so that** I can submit a valid, fact-based argument to the court. |
-| US10 | As a player, I want used evidence cards to be marked or removed from my folder, **so that** I am challenged to produce new arguments each round. |
+| ID | Status | Story |
+|---|---|---|
+| US7 | Done | As a player, I want a fixed case summary always visible, **so that** I don't lose track of essential details. |
+| US8 | Done | As a playing attorney, I want a visual Evidence Folder showing cards I can consult, **so that** I can build my strategy. |
+| US9 | Done | As a player, I want to select an evidence card and attach it to my argument, **so that** I can submit a fact-based argument. |
+| US10 | Done | As a player, I want used evidence cards to be marked in my folder, **so that** I am challenged to produce new arguments each round. |
 
 ### AI Interaction & Objection Mechanic
 
-| ID | Story |
-|---|---|
-| US11 | As a player, I want an "Objection" button active only during my opponent's turn, **so that** I can pause their text generation and input a reason to contest their argument. |
+| ID | Status | Story |
+|---|---|---|
+| US11 | Done | As a player, I want a one-time **Objection** button available during my turn, **so that** I can challenge a flawed opponent argument and force the AI to address it directly in its next response. |
 
 ### AI Judge, Scales of Justice & Verdict
 
-| ID | Story |
-|---|---|
-| US12 | As a player, I want a visual "Scales of Justice" progress bar that tilts toward me or my opponent after each round, **so that** I can monitor the match score in real-time. |
-| US13 | As the Judge, I want to end the trial after a predefined number of rounds, analyze the chat history alongside the Scales of Justice, and generate a motivated final verdict (Guilty / Not Guilty) saved to the database, **so that** I can officially close the game session. |
+| ID | Status | Story |
+|---|---|---|
+| US12 | Done | As a player, I want a visual Scales of Justice bar that updates after each round, **so that** I can monitor match momentum in real time. |
+| US13 | Done | As the Judge, I want to deliver a motivated final verdict after the debate concludes, **so that** I can officially close the session with a reasoned decision. |
 
 ---
 
 ## Contributing
 
-Contributions, issues, and feature requests are welcome! Please follow the workflow below to keep the project history clean and traceable.
+Contributions, issues, and feature requests are welcome.
 
-### 1. Open an Issue
+### 1. Open an issue
 
-Before writing any code, [open a GitHub Issue](https://github.com/georgiana-raluca-negru/the-turing-trials/issues/new) describing what you want to fix or add.
+Before writing code, [open a GitHub Issue](https://github.com/georgiana-raluca-negru/the-turing-trials/issues/new) with a clear title and description. Add relevant labels (`bug`, `enhancement`, `documentation`) and wait for acknowledgement.
 
-- Use a clear, descriptive title (e.g. `[Bug] Objection button visible during own turn` or `[Feature] Add spectator chat panel`)
-- Describe the problem or feature request in detail
-- Add relevant labels (e.g. `bug`, `enhancement`, `documentation`)
-- Wait for the issue to be acknowledged/assigned before proceeding
-
-### 2. Fork & Create a Dedicated Branch
-
-Fork the repository and create a branch that references the issue number:
+### 2. Fork and branch
 
 ```bash
-
 git clone https://github.com/<your-username>/the-turing-trials.git
 cd the-turing-trials
-
-# Create a branch linked to your issue
-# Format: <type>/<number>-short-description
-git checkout -b feature/42-spectator-chat-panel
+git checkout -b feature/42-short-description
 ```
 
-> **Branch naming conventions:**
-> - `feature/<N>-description` — new functionality
-> - `fix/<N>-description` — bug fixes
-> - `docs/<N>-description` — documentation updates
-> - `chore/<N>-description` — maintenance / refactoring
+Branch naming conventions:
+- `feature/<N>-description` — new functionality
+- `fix/<N>-description` — bug fixes
+- `docs/<N>-description` — documentation
+- `chore/<N>-description` — maintenance / refactoring
 
-### 3. Commit, Push & Open a Pull Request
+### 3. Commit and open a pull request
 
 ```bash
-# Make your changes, then commit
-git commit -m 'feat: add spectator chat panel (closes #42)'
-
-# Push your branch
-git push origin feature/42-spectator-chat-panel
+git commit -m 'feat: short description (closes #42)'
+git push origin feature/42-short-description
 ```
 
-Then open a Pull Request against `main`. In the PR description, use one of the GitHub closing keywords so the issue is automatically closed when the PR is merged:
-
-```
-Closes #42
-```
----
+Open a pull request against `main` and include `Closes #42` in the description so the issue closes automatically on merge.

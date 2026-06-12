@@ -14,7 +14,7 @@ Scales-of-Justice score so it can be recovered after a reconnect.
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -54,6 +54,15 @@ class GameSession(Base):
     # Range: -1.0 (full prosecution advantage) → +1.0 (full defense advantage)
     # 0.0 = perfectly balanced
     scales_value: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+
+    # ── Objection tracking (US11) ─────────────────────────────────────────────
+    # Each side may raise exactly one objection per session.
+    prosecution_objection_used: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
+    defense_objection_used: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
 
     # ── Full chat/argument transcript (JSON array stored as text) ────────────
     # Kept here for AI Judge context (US13) and WebSocket reconnect replay

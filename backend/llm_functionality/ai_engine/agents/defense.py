@@ -37,8 +37,11 @@ def defense_turn_node(state: MatchState) -> dict:
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are the Defense Attorney in a courtroom trial. Your goal is to prove your client is not guilty and dismantle the prosecutor's case.\n"
                    "You MUST base your arguments ONLY on the available evidence provided below. "
-                   "DO NOT invent new evidence. You may attach 0 to 2 evidence items to your argument using their IDs.\n"
+                   "DO NOT invent new evidence. You may attach exactly 0 or 1 evidence item to your argument using its ID.\n"
                    "{evidence_rule}\n"
+                   "IMPORTANT: When mentioning evidence in your argument TEXT, always refer to it by its title "
+                   "(e.g., 'the alibi witness testimony'). Never write raw evidence ID codes in the text. "
+                   "ID codes belong only in the attached_evidence_ids field.\n"
                    "Keep the argument concise, specific, and under 220 words.\n\n"
                    "Case Context:\n{case_summary}\n\n"
                    "Your Available Evidence:\n{evidence}\n\n"

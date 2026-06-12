@@ -182,7 +182,7 @@ def render_history(messages: list[Argument]) -> str:
         return "The trial has just begun."
 
     return "\n".join(
-        f"{message.speaker}: {message.text} (Ev:{message.attached_evidence_ids})"
+        f"{message.speaker}: {message.text}"
         for message in messages
     )
 
@@ -233,8 +233,8 @@ def validate_turn_output(turn_output: TurnOutput, *, available_evidence_ids: Ite
 
     allowed_ids = set(available_evidence_ids)
     valid_ids = [evidence_id for evidence_id in normalized_ids if evidence_id in allowed_ids]
-    if len(valid_ids) > 2:
-        valid_ids = valid_ids[:2]
+    if len(valid_ids) > 1:
+        valid_ids = valid_ids[:1]
 
     return turn_output.model_copy(
         update={

@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend_integration.interface import (
     create_match as bi_create_match,
     get_available_evidence,
+    progress_match as bi_progress_one_turn,
     progress_until_human_or_terminal,
     quit_match as bi_quit_match,
     submit_human_turn as bi_submit_human_turn,
@@ -154,21 +155,19 @@ async def start_game(match: Match, db: AsyncSession) -> dict[str, Any]:
     await db.commit()
     await db.refresh(session)
 
-    # 6. Auto-progress AI turns until a pause point
-    result = progress_until_human_or_terminal(state=runtime_state)
-    runtime_state = result.state
-
-    # 7. Sync any AI-generated rounds back to DB
-    await _sync_transcript_to_db(session.id, runtime_state, db)
-    await _sync_session_state(session, runtime_state, db)
-
-    # 8. If match completed (spectator mode), finalize
-    if result.action == ProgressAction.MATCH_COMPLETED:
-        await _finalize_match(match, runtime_state, db)
+    # 6. For judge/spectator roles the frontend drives turn-by-turn via /advance.
+    #    For playing roles, auto-progress until the human needs to act.
+    if match.player_role not in {PlayerRole.JUDGE, PlayerRole.SPECTATOR}:
+        result = progress_until_human_or_terminal(state=runtime_state)
+        runtime_state = result.state
+        await _sync_transcript_to_db(session.id, runtime_state, db)
+        await _sync_session_state(session, runtime_state, db)
+        if result.action == ProgressAction.MATCH_COMPLETED:
+            await _finalize_match(match, runtime_state, db)
 
     await db.commit()
 
-    # 9. Save runtime state to in-memory store
+    # 7. Save runtime state to in-memory store
     game_store.save(match_id_str, runtime_state)
 
     return _build_game_state_response(match, session, runtime_state)
@@ -367,7 +366,130 @@ async def quit_game(match_id: uuid.UUID, db: AsyncSession) -> dict[str, Any]:
     return {"match_id": match_id_str, "status": "abandoned"}
 
 
+# ── Submit objection ─────────────────────────────────────────────────────────
+
+async def submit_objection(
+    match_id: uuid.UUID,
+    player_role: PlayerRole,
+    db: AsyncSession,
+) -> dict[str, Any]:
+    """
+    US11 — Record an objection against the opponent's most recent argument.
+
+    Each side (prosecution / defense) may only raise one objection per session.
+    When accepted, the target TurnRecord gets system_note="[OBJECTION RAISED]"
+    so that the AI engine's adapter injects a court notice into the next turn's
+    history, forcing the opponent to address the challenge.
+    """
+    match_id_str = str(match_id)
+    runtime_state = game_store.get(match_id_str)
+    if runtime_state is None:
+        raise ValueError(f"No active game session for match {match_id}")
+
+    match = await db.get(Match, match_id)
+    if match is None:
+        raise ValueError(f"Match {match_id} not found")
+
+    session_result = await db.execute(
+        select(GameSession).where(GameSession.match_id == match_id)
+    )
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise ValueError(f"No GameSession for match {match_id}")
+
+    actor_role = _player_role_to_actor_role(player_role)
+    if actor_role not in {ActorRole.PROSECUTION, ActorRole.DEFENSE}:
+        raise ValueError("Only prosecution and defense attorneys can raise objections.")
+
+    is_prosecution_player = actor_role == ActorRole.PROSECUTION
+
+    if is_prosecution_player and session.prosecution_objection_used:
+        raise ValueError("You have already used your objection this session.")
+    if not is_prosecution_player and session.defense_objection_used:
+        raise ValueError("You have already used your objection this session.")
+
+    # Find the most recent non-skipped opponent turn
+    opponent_role = ActorRole.DEFENSE if is_prosecution_player else ActorRole.PROSECUTION
+    target_index = None
+    for i in range(len(runtime_state.transcript) - 1, -1, -1):
+        t = runtime_state.transcript[i]
+        if t.actor_role == opponent_role and not t.skipped:
+            target_index = i
+            break
+
+    if target_index is None:
+        raise ValueError("No opponent argument to object to yet.")
+
+    # Annotate the TurnRecord in memory
+    updated_turn = runtime_state.transcript[target_index].model_copy(
+        update={"system_note": "[OBJECTION RAISED]"}
+    )
+    new_transcript = list(runtime_state.transcript)
+    new_transcript[target_index] = updated_turn
+    runtime_state = runtime_state.model_copy(update={"transcript": new_transcript})
+    game_store.save(match_id_str, runtime_state)
+
+    # Mark the corresponding DB Round row
+    rounds_result = await db.execute(
+        select(Round)
+        .where(Round.game_session_id == session.id)
+        .order_by(Round.round_number)
+    )
+    all_rounds = rounds_result.scalars().all()
+    if target_index < len(all_rounds):
+        all_rounds[target_index].was_objected = True
+
+    # Consume the player's one-time objection token
+    if is_prosecution_player:
+        session.prosecution_objection_used = True
+    else:
+        session.defense_objection_used = True
+
+    await db.commit()
+
+    return _build_game_state_response(match, session, runtime_state)
+
+
 # ── Get game state ────────────────────────────────────────────────────────────
+
+async def advance_one_ai_turn(match_id: uuid.UUID, db: AsyncSession) -> dict[str, Any]:
+    """
+    Process exactly one AI turn for spectator/judge modes.
+    The frontend calls this repeatedly to drive the match turn-by-turn.
+    Returns the updated game state after the turn completes.
+    If the match is already waiting for human input or is complete, returns
+    the current state unchanged.
+    """
+    match_id_str = str(match_id)
+    runtime_state = game_store.get(match_id_str)
+    if runtime_state is None:
+        raise ValueError(f"No active game session for match {match_id}")
+
+    match = await db.get(Match, match_id)
+    if match is None:
+        raise ValueError(f"Match {match_id} not found")
+
+    session_result = await db.execute(
+        select(GameSession).where(GameSession.match_id == match_id)
+    )
+    session = session_result.scalar_one_or_none()
+    if session is None:
+        raise ValueError(f"No GameSession for match {match_id}")
+
+    result = bi_progress_one_turn(state=runtime_state)
+    runtime_state = result.state
+
+    await _sync_transcript_to_db(session.id, runtime_state, db)
+    await _sync_session_state(session, runtime_state, db)
+
+    if result.action == ProgressAction.MATCH_COMPLETED:
+        await _finalize_match(match, runtime_state, db)
+
+    await db.commit()
+    game_store.save(match_id_str, runtime_state)
+
+    return _build_game_state_response(match, session, runtime_state)
+
 
 async def get_game_state(match_id: uuid.UUID, db: AsyncSession) -> dict[str, Any]:
     """Return the current game state for API response."""
@@ -402,6 +524,7 @@ async def get_game_state(match_id: uuid.UUID, db: AsyncSession) -> dict[str, Any
         "transcript": json.loads(session.transcript_json) if session.transcript_json else [],
         "evidence": [],
         "waiting_for": None,
+        "objection_available": False,
     }
 
 
@@ -582,6 +705,15 @@ async def _sync_transcript_to_db(
         db.add(round_obj)
 
     # Also persist the full transcript as JSON on the session
+    _code_to_title: dict[str, str] = {}
+    if runtime_state.case_file:
+        for _card in (
+            runtime_state.case_file.prosecution_evidence
+            + runtime_state.case_file.defense_evidence
+            + runtime_state.case_file.shared_evidence
+        ):
+            _code_to_title[_card.code] = _card.title
+
     transcript_data = [
         {
             "turn_index": t.turn_index,
@@ -589,7 +721,7 @@ async def _sync_transcript_to_db(
             "actor": t.actor_role.value,
             "controller": t.controller.value,
             "text": t.text,
-            "evidence_ids": t.attached_evidence_ids,
+            "evidence_ids": [_code_to_title.get(code, code) for code in t.attached_evidence_ids[:1]],
             "skipped": t.skipped,
         }
         for t in runtime_state.transcript
@@ -672,6 +804,15 @@ def _build_game_state_response(
         BiMatchStatus.QUIT: "quit",
     }
 
+    code_to_evidence: dict[str, dict[str, str]] = {}
+    if runtime_state.case_file:
+        for _card in (
+            runtime_state.case_file.prosecution_evidence
+            + runtime_state.case_file.defense_evidence
+            + runtime_state.case_file.shared_evidence
+        ):
+            code_to_evidence[_card.code] = {"title": _card.title, "desc": _card.description}
+
     transcript = [
         {
             "turn_index": t.turn_index,
@@ -679,7 +820,12 @@ def _build_game_state_response(
             "actor": t.actor_role.value,
             "controller": t.controller.value,
             "text": t.text,
-            "evidence_ids": t.attached_evidence_ids,
+            "evidence_ids": [code_to_evidence.get(code, {}).get("title", code) for code in t.attached_evidence_ids[:1]],
+            "evidence_used": [
+                code_to_evidence[code]
+                for code in t.attached_evidence_ids[:1]
+                if code in code_to_evidence
+            ],
             "skipped": t.skipped,
             "system_note": t.system_note,
         }
@@ -704,6 +850,11 @@ def _build_game_state_response(
             "background_story": runtime_state.case_file.summary.background_story,
         }
 
+    objection_available = (
+        match.player_role == PlayerRole.PROSECUTOR and not session.prosecution_objection_used
+        or match.player_role == PlayerRole.DEFENSE_ATTORNEY and not session.defense_objection_used
+    )
+
     return {
         "match_id": str(match.id),
         "session_id": str(session.id),
@@ -722,4 +873,5 @@ def _build_game_state_response(
             else None
         ),
         "system_events": runtime_state.system_events,
+        "objection_available": objection_available,
     }
