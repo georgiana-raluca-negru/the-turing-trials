@@ -53,6 +53,7 @@ interface GameState {
   transcript: TranscriptEntry[];
   verdict: VerdictData | null;
   waiting_for: string | null;
+  objection_available: boolean;
 }
 
 interface EvidenceCard {
@@ -86,9 +87,9 @@ const PLAYER_ACTOR: Record<string, string> = {
   judge: "judge",
 };
 
-// backend scales_value: -1.0 (defense) → +1.0 (prosecution)
-// ScalesOfJustice: 0 (defense) → 100 (prosecution), 50 = tie
-const toDisplayScore = (v: number) => Math.round((v + 1) * 50);
+// backend scales_value: -1.0 (prosecution advantage) → +1.0 (defense advantage)
+// ScalesOfJustice: 0 (defense wins) → 50 (tie) → 100 (prosecution wins)
+const toDisplayScore = (v: number) => Math.round((-v + 1) * 50);
 
 function transcriptToMessages(
   entries: TranscriptEntry[],
@@ -369,6 +370,19 @@ export default function CourtroomPage({
       showToast(`Verdict error: ${msg}`, "error");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  /* ── Raise objection ─────────────────────────────────────────────────── */
+  async function handleObjection() {
+    if (!match || !gameState?.objection_available || isSubmitting) return;
+    try {
+      const state = await apiJson<GameState>(`/api/sessions/${matchID}/objection`, { method: "POST" });
+      applyGameState(state, match.player_role, evidence);
+      showToast("OBJECTION! The court has been notified. Your opponent must address this challenge.", "warning");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to raise objection.";
+      showToast(msg, "error");
     }
   }
 
@@ -782,16 +796,23 @@ export default function CourtroomPage({
             <div ref={chatEndRef} />
           </div>
 
-          {/* Objection button (visible when AI has just replied and it's your turn) */}
-          {isMyTurn && !isSubmitting && !isCompleted && (
+          {/* Objection button — visible during player's turn, one-time use */}
+          {isMyTurn && !isCompleted && (match.player_role === "defense_attorney" || match.player_role === "prosecutor") && (
             <div className="absolute bottom-32 right-4 sm:right-6 z-20">
-              <button
-                onClick={() => showToast("Objection noted — recorded for this round.", "warning")}
-                className="bg-red-950/80 hover:bg-red-900/90 text-red-400 font-mono font-bold text-xs py-2 px-4 sm:py-3 sm:px-6 rounded border border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:shadow-[0_0_35px_rgba(239,68,68,0.5)] transition-all duration-300 animate-pulse uppercase tracking-[0.15em] flex items-center gap-2 cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                Objection!
-              </button>
+              {gameState.objection_available ? (
+                <button
+                  onClick={handleObjection}
+                  disabled={isSubmitting}
+                  className="bg-red-950/80 hover:bg-red-900/90 text-red-400 font-mono font-bold text-xs py-2 px-4 sm:py-3 sm:px-6 rounded border border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:shadow-[0_0_35px_rgba(239,68,68,0.5)] transition-all duration-300 animate-pulse uppercase tracking-[0.15em] flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:animate-none"
+                >
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                  Objection!
+                </button>
+              ) : (
+                <span className="font-mono text-[9px] text-[#667781] uppercase tracking-widest bg-[#F0F2F5] border border-[#D1D7DB] px-2 py-1 rounded opacity-60">
+                  Objection used
+                </span>
+              )}
             </div>
           )}
 

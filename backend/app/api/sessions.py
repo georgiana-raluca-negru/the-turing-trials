@@ -20,12 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.database import get_db
-from app.models.match import Match, MatchStatus
+from app.models.match import Match, MatchStatus, PlayerRole
 from app.models.game_session import GameSession
 from app.models.round import Round
 from app.models.user import User
 from app.schemas.session import (
-    ObjectionCreate,
     ObjectionResponse,
     RoundCreate,
     RoundOut,
@@ -37,6 +36,7 @@ from app.services.game_service import (
     get_game_state,
     quit_game,
     start_game,
+    submit_objection,
     submit_player_turn,
     submit_player_verdict,
 )
@@ -240,61 +240,36 @@ async def advance_turn(
 
 @router.post(
     "/{match_id}/objection",
-    summary="US11 — Submit an objection during the opponent's turn",
+    summary="US11 — Raise a one-time objection against the opponent's last argument",
 )
-async def submit_objection(
+async def raise_objection(
     match_id: uuid.UUID,
-    body: ObjectionCreate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    US11: The player triggers an Objection during the opponent's turn.
-    The objection text is stored on the specified round.
+    US11: One-click objection. No message required.
+    Each side (prosecution / defense) may raise exactly one objection per session.
 
-    Note: In the current implementation, objections are recorded on the round
-    but do not interrupt AI text generation (that requires WebSocket streaming).
-    The objection text and response are persisted for future real-time support.
+    The opponent's most recent argument is flagged. On their next AI turn,
+    the engine injects a court notice forcing them to address the challenge.
+    Returns the updated game state (including objection_available: false).
     """
-    # Verify ownership
     result = await db.execute(
         select(Match).where(
             Match.id == match_id,
             Match.player_id == current_user.id,
         )
     )
-    if result.scalar_one_or_none() is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Match not found",
-        )
+    match = result.scalar_one_or_none()
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Match not found")
 
-    # Find the round to object to
-    round_result = await db.execute(
-        select(Round).where(Round.id == body.round_id)
-    )
-    target_round = round_result.scalar_one_or_none()
-    if target_round is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Round not found",
-        )
-
-    # Record the objection
-    target_round.was_objected = True
-    target_round.objection_text = body.objection_text
-    # In a future version, this would trigger AI to generate an objection response
-    target_round.objection_response = (
-        "Objection noted and recorded. "
-        "The court will take this into consideration."
-    )
-    await db.commit()
-
-    return ObjectionResponse(
-        round_id=target_round.id,
-        objection_accepted=True,
-        objection_response=target_round.objection_response,
-    )
+    try:
+        game_state = await submit_objection(match_id, match.player_role, db)
+        return game_state
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # ── POST /api/sessions/{match_id}/verdict — Human judge verdict ───────────────
@@ -329,7 +304,6 @@ async def submit_verdict(
             detail="Match not found",
         )
 
-    from app.models.match import PlayerRole
     if match.player_role != PlayerRole.JUDGE:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

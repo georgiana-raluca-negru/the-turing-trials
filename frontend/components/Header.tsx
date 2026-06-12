@@ -69,6 +69,9 @@ export default function Header() {
               <Link href="/dashboard" className="text-[#B2DFDB] hover:text-white transition-colors uppercase tracking-widest">
                 [ Archives ]
               </Link>
+              <Link href="/leaderboard" className="text-[#B2DFDB] hover:text-white transition-colors uppercase tracking-widest">
+                [ Leaderboard ]
+              </Link>
               <Link href="/setup" className="text-[#B2DFDB] hover:text-white transition-colors uppercase tracking-widest">
                 [ New Trial ]
               </Link>
@@ -150,6 +153,9 @@ export default function Header() {
               </div>
               <Link href="/dashboard" className="text-[#B2DFDB] hover:text-white transition-colors uppercase tracking-widest py-1">
                 [ Archives ]
+              </Link>
+              <Link href="/leaderboard" className="text-[#B2DFDB] hover:text-white transition-colors uppercase tracking-widest py-1">
+                [ Leaderboard ]
               </Link>
               <Link href="/setup" className="text-[#B2DFDB] hover:text-white transition-colors uppercase tracking-widest py-1">
                 [ New Trial ]

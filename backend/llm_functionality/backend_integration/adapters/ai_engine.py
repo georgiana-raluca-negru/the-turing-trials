@@ -109,10 +109,30 @@ def _to_ai_state(state: MatchRuntimeState) -> dict:
         "case_summary": _to_ai_case_summary(state.case_file.summary),
         "defense_evidence": [_to_ai_evidence(evidence) for evidence in state.case_file.defense_evidence],
         "prosecution_evidence": [_to_ai_evidence(evidence) for evidence in state.case_file.prosecution_evidence],
-        "messages": [_to_ai_argument(turn) for turn in state.transcript if turn.actor_role != ActorRole.JUDGE],
+        "messages": _build_message_history(state),
         "round_number": state.current_cycle,
         "system_events": list(state.system_events),
     }
+
+
+def _build_message_history(state: MatchRuntimeState) -> list[Argument]:
+    messages = []
+    for turn in state.transcript:
+        if turn.actor_role == ActorRole.JUDGE:
+            continue
+        messages.append(_to_ai_argument(turn))
+        if turn.system_note == "[OBJECTION RAISED]":
+            messages.append(Argument(
+                speaker="System",
+                text=(
+                    "[COURT NOTICE — OBJECTION] The opposing counsel has formally challenged "
+                    "the preceding argument as irrelevant or misleading. "
+                    "In your next argument you MUST directly address and rebut this objection "
+                    "before presenting any new points."
+                ),
+                attached_evidence_ids=[],
+            ))
+    return messages
 
 
 def _to_ai_case_summary(summary: CaseSummary) -> CaseContext:

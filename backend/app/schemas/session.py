@@ -72,19 +72,9 @@ class RoundOut(BaseModel):
 
 # ── Objection (US11) ──────────────────────────────────────────────────────────
 
-class ObjectionCreate(BaseModel):
-    """
-    US11 — The player triggers an Objection during the opponent's turn.
-    The *round_id* identifies which in-progress round to interrupt.
-    """
-    round_id: uuid.UUID
-    objection_text: str = Field(..., min_length=5, max_length=1000)
-
-
 class ObjectionResponse(BaseModel):
-    round_id: uuid.UUID
     objection_accepted: bool
-    objection_response: str    # AI-generated rebuttal or sustain reasoning
+    objection_response: str
 
 
 # ── Verdict (US13) ────────────────────────────────────────────────────────────
