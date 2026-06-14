@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # IMPORTANT: set a real random secret in production!
     JWT_SECRET_KEY: str = "CHANGE_ME_super_secret_key_at_least_32_chars"
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # ── OAuth — Google ────────────────────────────────────────────────────────
