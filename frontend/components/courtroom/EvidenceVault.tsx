@@ -19,9 +19,6 @@ export default function EvidenceVault({ items, onAttach, attachedId }: EvidenceV
   const [open, setOpen] = useState(false);
   const available = items.filter((e) => !e.used);
 
-  const n = items.length;
-  const center = (n - 1) / 2;
-
   return (
     <div className="h-full flex flex-col items-center font-mono">
       <div className="w-full border-b border-[#128C7E]/30 pb-3 mb-4 flex items-center justify-between">
@@ -85,24 +82,16 @@ export default function EvidenceVault({ items, onAttach, attachedId }: EvidenceV
             {onAttach ? "Select a case file to attach" : "Evidence inventory"}
           </p>
 
-          <div className="relative w-full max-w-4xl h-[28rem] sm:h-[26rem]">
+          <div
+            className="w-full max-w-6xl overflow-x-auto px-4 sm:px-12 py-10 snap-x snap-mandatory flex gap-6 sm:gap-10 items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
             {items.map((item, i) => {
-              const offset = i - center;
-              const angle = offset * 7;
-              const x = offset * (n > 5 ? 90 : 130);
-              const y = Math.abs(offset) * 14;
               const selectable = !!onAttach && !item.used;
               const isAttached = attachedId !== undefined && String(attachedId) === String(item.id);
 
               return (
-                <div
-                  key={item.id}
-                  className="absolute left-1/2 top-1/2"
-                  style={{
-                    transform: `translate(-50%, -50%) translate(${x}px, ${y}px) rotate(${angle}deg)`,
-                    zIndex: isAttached ? 30 : i,
-                  }}
-                >
+                <div key={item.id} className="snap-center shrink-0 first:ml-auto last:mr-auto">
                   <div className="card-fan-in" style={{ animationDelay: `${i * 0.06}s` }}>
                     <div className="float-card" style={{ animationDelay: `${i * 0.18}s` }}>
                       <div
@@ -112,7 +101,7 @@ export default function EvidenceVault({ items, onAttach, attachedId }: EvidenceV
                           onAttach?.(item.id);
                           setOpen(false);
                         }}
-                        className={`w-40 sm:w-48 h-56 sm:h-64 rounded-xl border-2 p-4 flex flex-col shadow-2xl transition-all duration-200 ${
+                        className={`w-64 sm:w-80 h-80 sm:h-96 rounded-xl border-2 p-5 sm:p-6 flex flex-col shadow-2xl transition-all duration-200 ${
                           item.used
                             ? "bg-[rgb(var(--bg-elevated))] border-[rgb(var(--border-sub))] opacity-50"
                             : isAttached
@@ -120,29 +109,29 @@ export default function EvidenceVault({ items, onAttach, attachedId }: EvidenceV
                             : "bg-[rgb(var(--bg-surface))] border-[#128C7E]/50 hover:border-[#25D366] hover:shadow-[0_0_30px_rgba(37,211,102,0.4)] hover:-translate-y-2"
                         } ${selectable ? "cursor-pointer" : "cursor-default"}`}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-[rgb(var(--heading))]/50">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-[rgb(var(--heading))]/50">
                             Exhibit {String(i + 1).padStart(2, "0")}
                           </span>
                           {item.used && (
-                            <span className="text-[8px] bg-[rgb(var(--border-sub))] text-[rgb(var(--text-muted))] px-1.5 py-0.5 rounded uppercase">
+                            <span className="text-[9px] bg-[rgb(var(--border-sub))] text-[rgb(var(--text-muted))] px-2 py-0.5 rounded uppercase">
                               Used
                             </span>
                           )}
                           {isAttached && (
-                            <span className="text-[8px] bg-[#25D366] text-white px-1.5 py-0.5 rounded uppercase">
+                            <span className="text-[9px] bg-[#25D366] text-white px-2 py-0.5 rounded uppercase">
                               Attached
                             </span>
                           )}
                         </div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-[rgb(var(--heading))] mb-2">
+                        <h4 className="text-sm sm:text-base font-bold uppercase tracking-wider text-[rgb(var(--heading))] mb-3">
                           {item.title}
                         </h4>
-                        <p className="text-[10px] leading-relaxed text-[rgb(var(--text-muted))] overflow-y-auto flex-grow">
+                        <p className="text-xs sm:text-sm leading-[1.6] text-[rgb(var(--text-muted))] overflow-y-auto flex-grow">
                           {item.desc}
                         </p>
                         {selectable && (
-                          <p className="text-[9px] font-bold text-[#128C7E] uppercase tracking-widest mt-2 flex items-center gap-1">
+                          <p className="text-[10px] font-bold text-[#128C7E] uppercase tracking-widest mt-3 flex items-center gap-1">
                             <span className="text-[#25D366]">+</span> Tap to attach
                           </p>
                         )}
@@ -153,6 +142,10 @@ export default function EvidenceVault({ items, onAttach, attachedId }: EvidenceV
               );
             })}
           </div>
+
+          <p className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 text-[9px] sm:text-[10px] font-mono uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">
+            {items.length > 1 ? "← Scroll to browse exhibits →" : ""}
+          </p>
         </div>
       )}
     </div>

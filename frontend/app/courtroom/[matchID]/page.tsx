@@ -673,13 +673,13 @@ export default function CourtroomPage({
         {/* Left: Case Parameters — collapsible slide-out sidebar (desktop), tab panel (mobile) */}
         <button
           onClick={() => setCaseSidebarOpen((v) => !v)}
-          className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-40 flex-col items-center gap-1.5 py-4 px-1.5 rounded-r-lg border border-l-0 border-[rgb(var(--border-sub))] bg-[rgb(var(--bg-elevated))] text-[rgb(var(--text-muted))] hover:text-[rgb(var(--heading))] hover:border-[#128C7E]/50 transition-all duration-300 cursor-pointer ${
+          className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-40 flex-col items-center gap-2 py-5 px-2 rounded-r-lg border-2 border-l-0 border-[#128C7E] bg-[rgb(var(--bg-surface))] text-[#25D366] shadow-[0_0_16px_rgba(37,211,102,0.25)] hover:bg-[rgb(var(--bg-elevated))] hover:shadow-[0_0_22px_rgba(37,211,102,0.4)] transition-all duration-300 cursor-pointer ${
             caseSidebarOpen ? "left-80" : "left-0"
           }`}
           title={caseSidebarOpen ? "Collapse case parameters" : "Expand case parameters"}
         >
-          <span className="text-xs">{caseSidebarOpen ? "‹" : "›"}</span>
-          <span className="text-[9px] font-mono uppercase tracking-[0.2em] [writing-mode:vertical-rl]">Case</span>
+          <span className="text-base font-black leading-none">{caseSidebarOpen ? "‹" : "›"}</span>
+          <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] [writing-mode:vertical-rl]">Case</span>
         </button>
 
         <aside
