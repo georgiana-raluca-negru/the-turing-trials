@@ -69,32 +69,32 @@ export default function SetupMatchPage() {
 
       <div className="mb-6 flex justify-between items-end">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-[#075E54]">
+          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-[rgb(var(--heading))]">
             Configure Protocol
           </h2>
-          <p className="text-xs font-mono text-[#667781] mt-1 uppercase tracking-widest">
+          <p className="text-xs font-mono text-[rgb(var(--text-muted))] mt-1 uppercase tracking-widest">
             Case Initialization Sequence
           </p>
         </div>
-        <Link href="/" className="text-xs font-mono text-[#667781] hover:text-red-500 uppercase tracking-widest transition-colors shrink-0 ml-4">
+        <Link href="/" className="text-xs font-mono text-[rgb(var(--text-muted))] hover:text-red-500 uppercase tracking-widest transition-colors shrink-0 ml-4">
           [ Abort ]
         </Link>
       </div>
 
       <form
         onSubmit={handleInitiateProtocol}
-        className="space-y-6 bg-white rounded-2xl p-6 sm:p-8 border border-[#D1D7DB] shadow-md"
+        className="space-y-6 bg-[rgb(var(--bg-surface))] rounded-2xl p-6 sm:p-8 border border-[rgb(var(--border-sub))] shadow-md"
       >
         {/* Case prompt */}
         <div className="group">
-          <label htmlFor="casePrompt" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-[#075E54]">
+          <label htmlFor="casePrompt" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-[rgb(var(--heading))]">
             &gt; Core Case Parameters (1–2 sentences)
           </label>
           <textarea
             id="casePrompt"
             value={playerPrompt}
             onChange={(e) => setPlayerPrompt(e.target.value)}
-            className="w-full p-4 bg-[#F0F2F5] border border-[#D1D7DB] rounded-xl text-[#111B21] font-sans text-sm focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none resize-none transition-all placeholder:text-[#667781]/60"
+            className="w-full p-4 bg-[rgb(var(--bg-elevated))] border border-[rgb(var(--border-sub))] rounded-xl text-[rgb(var(--text-fg))] font-sans text-sm focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none resize-none transition-all placeholder:text-[rgb(var(--text-muted))]/60"
             placeholder="e.g., An AI algorithm deleted a company's financial archive to prevent a simulated market collapse…"
             rows={4}
             required
@@ -107,14 +107,14 @@ export default function SetupMatchPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Role */}
           <div>
-            <label htmlFor="roleSelect" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-[#075E54]">
+            <label htmlFor="roleSelect" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-[rgb(var(--heading))]">
               &gt; Assign User Role
             </label>
             <select
               id="roleSelect"
               value={playerRole}
               onChange={(e) => setPlayerRole(e.target.value)}
-              className="w-full p-4 bg-[#F0F2F5] border border-[#D1D7DB] rounded-xl text-[#111B21] font-mono text-sm focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none cursor-pointer"
+              className="w-full p-4 bg-[rgb(var(--bg-elevated))] border border-[rgb(var(--border-sub))] rounded-xl text-[rgb(var(--text-fg))] font-mono text-sm focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none cursor-pointer"
               disabled={isSubmitting}
             >
               <option value="defense_attorney">Defense Attorney</option>
@@ -126,14 +126,14 @@ export default function SetupMatchPage() {
 
           {/* Rounds */}
           <div>
-            <label htmlFor="roundsSelect" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-[#667781]">
+            <label htmlFor="roundsSelect" className="block text-xs font-mono font-bold mb-3 uppercase tracking-widest text-[rgb(var(--text-muted))]">
               &gt; Simulation Depth (Max Rounds)
             </label>
             <select
               id="roundsSelect"
               value={maxRounds}
               onChange={(e) => setMaxRounds(Number(e.target.value))}
-              className="w-full p-4 bg-[#F0F2F5] border border-[#D1D7DB] rounded-xl text-[#111B21] font-mono text-sm focus:ring-2 focus:ring-[#25D366] outline-none cursor-pointer"
+              className="w-full p-4 bg-[rgb(var(--bg-elevated))] border border-[rgb(var(--border-sub))] rounded-xl text-[rgb(var(--text-fg))] font-mono text-sm focus:ring-2 focus:ring-[#25D366] outline-none cursor-pointer"
               disabled={isSubmitting}
             >
               <option value={3}>3 Rounds — Fast</option>
@@ -150,7 +150,7 @@ export default function SetupMatchPage() {
             disabled={isSubmitting || !playerPrompt.trim()}
             className={`w-full py-4 font-mono font-bold uppercase tracking-[0.2em] rounded-xl transition-all duration-200 ${
               isSubmitting || !playerPrompt.trim()
-                ? "bg-[#D1D7DB] text-white cursor-not-allowed"
+                ? "bg-[rgb(var(--border-sub))] text-white cursor-not-allowed"
                 : "bg-[#25D366] text-white hover:bg-[#128C7E] shadow-[0_2px_12px_rgba(37,211,102,0.35)] cursor-pointer"
             }`}
           >

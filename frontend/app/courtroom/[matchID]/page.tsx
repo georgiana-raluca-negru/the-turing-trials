@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import ScalesOfJustice from "@/components/courtroom/ScalesOfJustice";
 import CaseSummary from "@/components/courtroom/CaseSummary";
-import EvidenceFolder, { EvidenceItem } from "@/components/courtroom/EvidenceFolder";
+import EvidenceVault, { EvidenceItem } from "@/components/courtroom/EvidenceVault";
 import Spinner from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
 import { apiJson, apiFetch } from "@/lib/api";
@@ -150,6 +150,7 @@ export default function CourtroomPage({
   const [argumentBuffer, setArgumentBuffer] = useState("");
   const [verdictChoice, setVerdictChoice] = useState<"guilty" | "not_guilty" | null>(null);
   const [mobilePanelTab, setMobilePanelTab] = useState<"chat" | "case" | "evidence">("chat");
+  const [caseSidebarOpen, setCaseSidebarOpen] = useState(false);
   const [verdictOverlayDismissed, setVerdictOverlayDismissed] = useState(false);
   const [abandonConfirm, setAbandonConfirm] = useState(false);
   const [isSpectating, setIsSpectating] = useState(false);
@@ -409,7 +410,7 @@ export default function CourtroomPage({
   /* ── Loading ──────────────────────────────────────────────────────────── */
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center flex-grow min-h-[calc(100vh-57px)] bg-[#ECE5DD]">
+      <div className="flex items-center justify-center flex-grow min-h-[calc(100vh-57px)] bg-[rgb(var(--bg-page))]">
         <Spinner label="Initializing Courtroom..." size="lg" />
       </div>
     );
@@ -417,13 +418,13 @@ export default function CourtroomPage({
 
   if (error || !match || !gameState) {
     return (
-      <div className="flex flex-col items-center justify-center flex-grow min-h-[calc(100vh-57px)] bg-[#ECE5DD] gap-4">
+      <div className="flex flex-col items-center justify-center flex-grow min-h-[calc(100vh-57px)] bg-[rgb(var(--bg-page))] gap-4">
         <p className="font-mono text-red-600 text-sm border border-red-300 bg-red-50 px-6 py-4 rounded-xl uppercase tracking-wider">
           ERR: {error || "Match not found"}
         </p>
         <button
           onClick={() => router.push("/dashboard")}
-          className="text-xs font-mono text-[#667781] hover:text-[#075E54] uppercase tracking-widest transition-colors cursor-pointer"
+          className="text-xs font-mono text-[rgb(var(--text-muted))] hover:text-[rgb(var(--heading))] uppercase tracking-widest transition-colors cursor-pointer"
         >
           Return to Archives
         </button>
@@ -471,39 +472,41 @@ export default function CourtroomPage({
   }) {
     const isUser = msg.role === "user";
     const isJudge = msg.role === "judge";
-    const isProsecution = msg.role === "prosecutor";
+    const isProsecution =
+      msg.role === "prosecutor" || (isUser && playerRole === "prosecutor");
+    const isDefense =
+      msg.role === "defense" || (isUser && playerRole === "defense_attorney");
+
+    // CSS variable group driving this bubble's color theme — written out as
+    // literal class strings so Tailwind's scanner can pick them up.
+    const THEME = {
+      judge: {
+        bubble: "bg-[rgb(var(--bubble-judge-bg))] border border-[rgb(var(--bubble-judge-border))]",
+        text: "text-[rgb(var(--bubble-judge-text))]",
+        exhibit: "bg-[rgb(var(--bubble-judge-bg))]/10 border border-[rgb(var(--bubble-judge-border))]/40",
+      },
+      prosecution: {
+        bubble: "bg-[rgb(var(--bubble-prosecution-bg))] border border-[rgb(var(--bubble-prosecution-border))]",
+        text: "text-[rgb(var(--bubble-prosecution-text))]",
+        exhibit: "bg-[rgb(var(--bubble-prosecution-bg))]/10 border border-[rgb(var(--bubble-prosecution-border))]/40",
+      },
+      defense: {
+        bubble: "bg-[rgb(var(--bubble-defense-bg))] border border-[rgb(var(--bubble-defense-border))]",
+        text: "text-[rgb(var(--bubble-defense-text))]",
+        exhibit: "bg-[rgb(var(--bubble-defense-bg))]/10 border border-[rgb(var(--bubble-defense-border))]/40",
+      },
+    } as const;
+
+    const v = isJudge ? "judge" : isProsecution ? "prosecution" : "defense";
+    const theme = THEME[v];
 
     const bubbleClass = isJudge
-      ? "bg-[#FFF8E1] border border-[#FFE082] max-w-full shadow-sm"
-      : isUser
-      ? "bg-[#DCF8C6] border border-[#A8D9AC] max-w-[92%] ml-auto shadow-sm"
-      : isProsecution
-      ? "bg-[#FDECEA] border border-[#FFCDD2] max-w-[92%] shadow-sm"
-      : "bg-white border border-[#D1D7DB] max-w-[92%] shadow-sm";
+      ? `${theme.bubble} max-w-full shadow-sm`
+      : `${theme.bubble} shadow-sm ${isUser ? "max-w-[92%] ml-auto" : "max-w-[92%]"}`;
 
-    const labelColor = isJudge
-      ? "text-amber-700"
-      : isUser
-      ? "text-[#075E54]"
-      : isProsecution
-      ? "text-red-700"
-      : "text-[#667781]";
-
-    const exhibitCardClass = isJudge
-      ? "bg-[#FFF3CD] border border-[#FFE082]"
-      : isUser
-      ? "bg-[#C8F0B0] border border-[#8FC98B]"
-      : isProsecution
-      ? "bg-[#FFEBEE] border border-[#EF9A9A]"
-      : "bg-[#F0F2F5] border border-[#D1D7DB]";
-
-    const exhibitTitleColor = isJudge
-      ? "text-amber-700"
-      : isUser
-      ? "text-[#075E54]"
-      : isProsecution
-      ? "text-red-700"
-      : "text-[#667781]";
+    const textColor = theme.text;
+    const labelColor = `${textColor} opacity-80`;
+    const exhibitCardClass = theme.exhibit;
 
     const label = isJudge
       ? "Judge AI"
@@ -511,7 +514,9 @@ export default function CourtroomPage({
       ? `${roleLabel[playerRole] ?? "Counsel"} (You)`
       : isProsecution
       ? "Prosecutor AI"
-      : "Defense AI";
+      : isDefense
+      ? "Defense AI"
+      : "Counsel";
 
     return (
       <div className={`p-3 sm:p-4 rounded-xl font-mono text-xs ${bubbleClass}`}>
@@ -520,22 +525,22 @@ export default function CourtroomPage({
             {label}
           </span>
           {msg.round > 0 && (
-            <span className="text-[10px] text-[#667781] shrink-0 ml-2">
+            <span className={`text-[10px] shrink-0 ml-2 ${textColor} opacity-60`}>
               Cycle {msg.round}/{maxRounds}
             </span>
           )}
         </div>
-        <p className="text-[#111B21] font-sans leading-relaxed text-xs sm:text-sm">
+        <p className={`font-sans leading-relaxed text-xs sm:text-sm ${textColor}`}>
           {msg.content}
         </p>
         {msg.evidenceItems && msg.evidenceItems.length > 0 && (
           <div className="mt-2 pt-2 border-t border-current/10 space-y-1.5">
             {msg.evidenceItems.map((ev) => (
               <div key={ev.id} className={`${exhibitCardClass} rounded-lg p-2`}>
-                <p className={`text-[9px] font-bold uppercase tracking-wider mb-0.5 ${exhibitTitleColor}`}>
+                <p className={`text-[9px] font-bold uppercase tracking-wider mb-0.5 ${textColor} opacity-90`}>
                   Exhibit: {ev.title}
                 </p>
-                <p className="text-[9px] text-[#667781] leading-relaxed">{ev.desc}</p>
+                <p className={`text-[9px] leading-relaxed ${textColor} opacity-70`}>{ev.desc}</p>
               </div>
             ))}
           </div>
@@ -546,12 +551,12 @@ export default function CourtroomPage({
 
   /* ── Render ───────────────────────────────────────────────────────────── */
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)] sm:h-[calc(100vh-65px)] bg-[#ECE5DD] overflow-hidden relative">
+    <div className="flex flex-col h-[calc(100vh-56px)] sm:h-[calc(100vh-65px)] bg-[rgb(var(--bg-page))] overflow-hidden relative">
 
       {/* ── End-of-game overlay ── */}
       {isCompleted && gameState.verdict && !verdictOverlayDismissed && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-white border rounded-2xl shadow-2xl font-mono overflow-hidden border-[#D1D7DB]">
+          <div className="w-full max-w-lg bg-[rgb(var(--bg-surface))] border rounded-2xl shadow-2xl font-mono overflow-hidden border-[rgb(var(--border-sub))]">
 
             {/* Header bar */}
             <div className={`px-6 py-4 border-b flex items-start justify-between gap-4 ${
@@ -562,7 +567,7 @@ export default function CourtroomPage({
                 : "border-amber-200 bg-amber-50"
             }`}>
               <div>
-                <p className="text-[10px] text-[#667781] uppercase tracking-widest mb-1">Trial Concluded</p>
+                <p className="text-[10px] text-[rgb(var(--text-muted))] uppercase tracking-widest mb-1">Trial Concluded</p>
                 <h2 className={`text-2xl font-black uppercase tracking-widest ${
                   gameState.verdict.guilty === true
                     ? "text-red-700"
@@ -575,7 +580,7 @@ export default function CourtroomPage({
               </div>
               <button
                 onClick={() => setVerdictOverlayDismissed(true)}
-                className="text-[#667781] hover:text-[#111B21] text-lg leading-none mt-1 cursor-pointer transition-colors shrink-0"
+                className="text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-fg))] text-lg leading-none mt-1 cursor-pointer transition-colors shrink-0"
                 title="Dismiss and review chat"
               >
                 ✕
@@ -587,28 +592,28 @@ export default function CourtroomPage({
               {/* Case summary */}
               {caseSummaryText && (
                 <div>
-                  <p className="text-[10px] text-[#667781] uppercase tracking-widest mb-1">Case</p>
-                  <p className="text-xs text-[#111B21]">{caseSummaryText}</p>
+                  <p className="text-[10px] text-[rgb(var(--text-muted))] uppercase tracking-widest mb-1">Case</p>
+                  <p className="text-xs text-[rgb(var(--text-fg))]">{caseSummaryText}</p>
                 </div>
               )}
 
               {/* Role + rounds */}
               <div className="flex gap-6 text-xs">
                 <div>
-                  <p className="text-[10px] text-[#667781] uppercase tracking-widest mb-0.5">Your Role</p>
-                  <p className="text-[#111B21] font-bold uppercase">{roleLabel[match.player_role] ?? match.player_role}</p>
+                  <p className="text-[10px] text-[rgb(var(--text-muted))] uppercase tracking-widest mb-0.5">Your Role</p>
+                  <p className="text-[rgb(var(--text-fg))] font-bold uppercase">{roleLabel[match.player_role] ?? match.player_role}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#667781] uppercase tracking-widest mb-0.5">Rounds Played</p>
-                  <p className="text-[#111B21] font-bold">{gameState.current_round} / {gameState.max_rounds}</p>
+                  <p className="text-[10px] text-[rgb(var(--text-muted))] uppercase tracking-widest mb-0.5">Rounds Played</p>
+                  <p className="text-[rgb(var(--text-fg))] font-bold">{gameState.current_round} / {gameState.max_rounds}</p>
                 </div>
               </div>
 
               {/* Reasoning */}
               {gameState.verdict.reasoning && (
                 <div>
-                  <p className="text-[10px] text-[#667781] uppercase tracking-widest mb-1">Judge&apos;s Reasoning</p>
-                  <p className="text-xs text-[#667781] leading-relaxed max-h-32 overflow-y-auto pr-1">
+                  <p className="text-[10px] text-[rgb(var(--text-muted))] uppercase tracking-widest mb-1">Judge&apos;s Reasoning</p>
+                  <p className="text-xs text-[rgb(var(--text-muted))] leading-relaxed max-h-32 overflow-y-auto pr-1">
                     {gameState.verdict.reasoning}
                   </p>
                 </div>
@@ -616,16 +621,16 @@ export default function CourtroomPage({
             </div>
 
             {/* Actions */}
-            <div className="px-6 py-4 border-t border-[#D1D7DB] flex gap-3">
+            <div className="px-6 py-4 border-t border-[rgb(var(--border-sub))] flex gap-3">
               <button
                 onClick={() => setVerdictOverlayDismissed(true)}
-                className="flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg border border-[#D1D7DB] text-[#667781] bg-[#F0F2F5] hover:bg-[#D1D7DB] transition-all cursor-pointer"
+                className="flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg border border-[rgb(var(--border-sub))] text-[rgb(var(--text-muted))] bg-[rgb(var(--bg-elevated))] hover:bg-[rgb(var(--border-sub))] transition-all cursor-pointer"
               >
                 Review Chat
               </button>
               <button
                 onClick={() => router.push("/dashboard")}
-                className="flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg border border-[#D1D7DB] text-[#667781] bg-[#F0F2F5] hover:bg-[#D1D7DB] transition-all cursor-pointer"
+                className="flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg border border-[rgb(var(--border-sub))] text-[rgb(var(--text-muted))] bg-[rgb(var(--bg-elevated))] hover:bg-[rgb(var(--border-sub))] transition-all cursor-pointer"
               >
                 Archives
               </button>
@@ -641,20 +646,20 @@ export default function CourtroomPage({
       )}
 
       {/* Scales of Justice bar */}
-      <div className="w-full px-4 py-2 border-b border-[#D1D7DB] bg-[#F0F2F5] shrink-0 z-10">
+      <div className="w-full px-4 py-2 border-b border-[rgb(var(--border-sub))] bg-[rgb(var(--bg-elevated))] shrink-0 z-10">
         <ScalesOfJustice score={displayScore} />
       </div>
 
       {/* Mobile tab switcher */}
-      <div className="md:hidden flex border-b border-[#D1D7DB] bg-white shrink-0">
+      <div className="md:hidden flex border-b border-[rgb(var(--border-sub))] bg-[rgb(var(--bg-surface))] shrink-0">
         {(["chat", "case", "evidence"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setMobilePanelTab(tab)}
             className={`flex-1 py-2 text-[10px] font-mono font-bold uppercase tracking-widest transition-colors cursor-pointer ${
               mobilePanelTab === tab
-                ? "text-[#075E54] border-b-2 border-[#25D366]"
-                : "text-[#667781] hover:text-[#111B21]"
+                ? "text-[rgb(var(--heading))] border-b-2 border-[#25D366]"
+                : "text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text-fg))]"
             }`}
           >
             {tab}
@@ -665,11 +670,22 @@ export default function CourtroomPage({
       {/* 3-column layout */}
       <div className="flex flex-grow overflow-hidden relative z-10">
 
-        {/* Left: Case Summary */}
-        <aside
-          className={`w-full md:w-1/4 p-4 border-r border-[#D1D7DB] bg-[#F0F2F5] overflow-y-auto ${
-            mobilePanelTab === "case" ? "block" : "hidden md:block"
+        {/* Left: Case Parameters — collapsible slide-out sidebar (desktop), tab panel (mobile) */}
+        <button
+          onClick={() => setCaseSidebarOpen((v) => !v)}
+          className={`hidden md:flex absolute top-1/2 -translate-y-1/2 z-40 flex-col items-center gap-1.5 py-4 px-1.5 rounded-r-lg border border-l-0 border-[rgb(var(--border-sub))] bg-[rgb(var(--bg-elevated))] text-[rgb(var(--text-muted))] hover:text-[rgb(var(--heading))] hover:border-[#128C7E]/50 transition-all duration-300 cursor-pointer ${
+            caseSidebarOpen ? "left-80" : "left-0"
           }`}
+          title={caseSidebarOpen ? "Collapse case parameters" : "Expand case parameters"}
+        >
+          <span className="text-xs">{caseSidebarOpen ? "‹" : "›"}</span>
+          <span className="text-[9px] font-mono uppercase tracking-[0.2em] [writing-mode:vertical-rl]">Case</span>
+        </button>
+
+        <aside
+          className={`p-4 border-r border-[rgb(var(--border-sub))] bg-[rgb(var(--bg-elevated))] overflow-y-auto flex-col md:absolute md:inset-y-0 md:left-0 md:z-30 md:w-80 md:shadow-2xl transition-transform duration-300 ease-in-out ${
+            mobilePanelTab === "case" ? "flex w-full" : "hidden"
+          } ${caseSidebarOpen ? "md:flex md:translate-x-0" : "md:flex md:-translate-x-full"}`}
         >
           <CaseSummary
             matchId={match.id}
@@ -681,22 +697,22 @@ export default function CourtroomPage({
           />
 
           {!isCompleted && (
-            <div className="mt-4 pt-4 border-t border-[#D1D7DB] font-mono">
+            <div className="mt-4 pt-4 border-t border-[rgb(var(--border-sub))] font-mono">
               {!abandonConfirm ? (
                 <button
                   onClick={() => setAbandonConfirm(true)}
-                  className="w-full text-[10px] text-[#667781] hover:text-red-600 uppercase tracking-widest transition-colors cursor-pointer py-2 rounded-lg hover:bg-red-50 hover:border hover:border-red-200"
+                  className="w-full text-[10px] text-[rgb(var(--text-muted))] hover:text-red-600 uppercase tracking-widest transition-colors cursor-pointer py-2 rounded-lg hover:bg-red-50 hover:border hover:border-red-200"
                 >
                   Abandon Trial
                 </button>
               ) : (
                 <div className="text-center space-y-2">
                   <p className="text-[10px] text-red-600 uppercase tracking-widest">Confirm abandon?</p>
-                  <p className="text-[9px] text-[#667781]">This cannot be undone. Match will be saved as abandoned.</p>
+                  <p className="text-[9px] text-[rgb(var(--text-muted))]">This cannot be undone. Match will be saved as abandoned.</p>
                   <div className="flex gap-2 mt-2">
                     <button
                       onClick={() => setAbandonConfirm(false)}
-                      className="flex-1 text-[10px] uppercase py-1.5 border border-[#D1D7DB] rounded-lg text-[#667781] hover:bg-[#F0F2F5] cursor-pointer transition-colors"
+                      className="flex-1 text-[10px] uppercase py-1.5 border border-[rgb(var(--border-sub))] rounded-lg text-[rgb(var(--text-muted))] hover:bg-[rgb(var(--bg-elevated))] cursor-pointer transition-colors"
                     >
                       Cancel
                     </button>
@@ -715,7 +731,7 @@ export default function CourtroomPage({
 
         {/* Centre: Chat + input */}
         <section
-          className={`w-full md:w-2/4 flex flex-col bg-[#ECE5DD] relative border-r border-l border-[#D1D7DB] ${
+          className={`w-full md:flex-1 flex flex-col bg-[rgb(var(--bg-page))] relative border-r border-l border-[rgb(var(--border-sub))] ${
             mobilePanelTab === "chat" ? "flex" : "hidden md:flex"
           }`}
         >
@@ -723,7 +739,7 @@ export default function CourtroomPage({
           <div className="flex-grow p-3 sm:p-4 overflow-y-auto space-y-3">
             {messages.length === 0 && (
               <div className="flex items-center justify-center h-full">
-                <p className="font-mono text-[#667781] text-xs uppercase tracking-widest text-center">
+                <p className="font-mono text-[rgb(var(--text-muted))] text-xs uppercase tracking-widest text-center">
                   {match.player_role === "spectator" || match.player_role === "judge"
                     ? "Trial initializing… the court is in session."
                     : "Trial initializing… submit your opening argument."}
@@ -742,8 +758,8 @@ export default function CourtroomPage({
 
             {/* AI computing indicator */}
             {(isSubmitting || isSpectating) && (
-              <div className="p-3 bg-white border border-[#D1D7DB] rounded-lg max-w-[60%] font-mono text-xs shadow-sm">
-                <span className="text-[#667781] text-[10px] uppercase tracking-widest">
+              <div className="p-3 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-sub))] rounded-lg max-w-[60%] font-mono text-xs shadow-sm">
+                <span className="text-[rgb(var(--text-muted))] text-[10px] uppercase tracking-widest">
                   {isSpectating
                     ? (gameState.current_turn === "prosecution" ? "Prosecutor AI" : gameState.current_turn === "defense" ? "Defense AI" : "Judge AI") + " is deliberating"
                     : (match.player_role === "defense_attorney" ? "Prosecutor AI" : match.player_role === "prosecutor" ? "Defense AI" : "AI Agent") + " is deliberating"
@@ -788,7 +804,7 @@ export default function CourtroomPage({
                     ? "Not Guilty"
                     : "Pending"}
                 </div>
-                <p className="leading-relaxed text-[#111B21]">{gameState.verdict.reasoning}</p>
+                <p className="leading-relaxed text-[rgb(var(--text-fg))]">{gameState.verdict.reasoning}</p>
               </div>
             )}
 
@@ -808,7 +824,7 @@ export default function CourtroomPage({
                   Objection!
                 </button>
               ) : (
-                <span className="font-mono text-[9px] text-[#667781] uppercase tracking-widest bg-[#F0F2F5] border border-[#D1D7DB] px-2 py-1 rounded opacity-60">
+                <span className="font-mono text-[9px] text-[rgb(var(--text-muted))] uppercase tracking-widest bg-[rgb(var(--bg-elevated))] border border-[rgb(var(--border-sub))] px-2 py-1 rounded opacity-60">
                   Objection used
                 </span>
               )}
@@ -817,7 +833,7 @@ export default function CourtroomPage({
 
           {/* Attached evidence chip */}
           {attachedEvidence && (
-            <div className="px-4 pb-1 pt-1 flex gap-1 border-t border-[#D1D7DB] bg-[#F0F2F5]">
+            <div className="px-4 pb-1 pt-1 flex gap-1 border-t border-[rgb(var(--border-sub))] bg-[rgb(var(--bg-elevated))]">
               {(() => {
                 const item = evidence.find((e) => String(e.id) === attachedEvidence);
                 return item ? (
@@ -836,12 +852,12 @@ export default function CourtroomPage({
           )}
 
           {/* Input area */}
-          <div className="p-3 sm:p-4 border-t border-[#D1D7DB] bg-[#F0F2F5] shrink-0">
+          <div className="p-3 sm:p-4 border-t border-[rgb(var(--border-sub))] bg-[rgb(var(--bg-elevated))] shrink-0">
             {match.player_role === "spectator" ? (
               /* ── Pure spectator — no input ever ── */
               <div className="text-center py-2">
-                <p className="text-[10px] font-mono text-[#667781] uppercase tracking-widest flex items-center justify-center gap-2">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isCompleted ? "bg-[#667781]" : "bg-[#25D366] animate-pulse"}`} />
+                <p className="text-[10px] font-mono text-[rgb(var(--text-muted))] uppercase tracking-widest flex items-center justify-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${isCompleted ? "bg-[rgb(var(--text-muted))]" : "bg-[#25D366] animate-pulse"}`} />
                   {isCompleted ? "Trial concluded — spectator view" : "Spectating live — no input required"}
                 </p>
               </div>
@@ -870,7 +886,7 @@ export default function CourtroomPage({
                           ? v === "guilty"
                             ? "bg-red-50 border-red-400 text-red-700"
                             : "bg-emerald-50 border-emerald-400 text-emerald-700"
-                          : "bg-white border-[#D1D7DB] text-[#667781] hover:border-[#128C7E] hover:text-[#075E54]"
+                          : "bg-[rgb(var(--bg-surface))] border-[rgb(var(--border-sub))] text-[rgb(var(--text-muted))] hover:border-[#128C7E] hover:text-[rgb(var(--heading))]"
                       }`}
                     >
                       {v === "guilty" ? "Guilty" : "Not Guilty"}
@@ -880,7 +896,7 @@ export default function CourtroomPage({
                 <textarea
                   value={argumentBuffer}
                   onChange={(e) => setArgumentBuffer(e.target.value)}
-                  className="w-full p-3 bg-white border border-[#D1D7DB] rounded-lg text-[#111B21] font-mono text-xs focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none resize-none placeholder:text-[#667781]/60"
+                  className="w-full p-3 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-sub))] rounded-lg text-[rgb(var(--text-fg))] font-mono text-xs focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none resize-none placeholder:text-[rgb(var(--text-muted))]/60"
                   placeholder="State your reasoning… (min 20 characters)"
                   rows={3}
                   disabled={isSubmitting}
@@ -890,7 +906,7 @@ export default function CourtroomPage({
                   disabled={isSubmitting || !verdictChoice || argumentBuffer.trim().length < 20}
                   className={`w-full py-2.5 font-mono text-xs font-bold uppercase tracking-widest rounded border transition-all cursor-pointer ${
                     isSubmitting || !verdictChoice || argumentBuffer.trim().length < 20
-                      ? "border-[#D1D7DB] text-[#B2DFDB] bg-[#F0F2F5] cursor-not-allowed"
+                      ? "border-[rgb(var(--border-sub))] text-[rgb(var(--text-muted))] bg-[rgb(var(--bg-elevated))] cursor-not-allowed"
                       : "bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-400 hover:border-amber-500"
                   }`}
                 >
@@ -908,7 +924,7 @@ export default function CourtroomPage({
               /* ── Normal argument UI ── */
               <>
                 <div className="relative">
-                  <div className="absolute left-3 top-3 font-mono text-xs text-[#667781]/50 select-none">
+                  <div className="absolute left-3 top-3 font-mono text-xs text-[rgb(var(--text-muted))]/50 select-none">
                     &gt;
                   </div>
                   <textarea
@@ -918,7 +934,7 @@ export default function CourtroomPage({
                       if (e.key === "Enter" && (e.ctrlKey || e.metaKey))
                         handleSubmitArgument();
                     }}
-                    className="w-full pl-7 p-3 bg-white border border-[#D1D7DB] rounded-lg text-[#111B21] font-mono text-xs focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none resize-none placeholder:text-[#667781]/60"
+                    className="w-full pl-7 p-3 bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-sub))] rounded-lg text-[rgb(var(--text-fg))] font-mono text-xs focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none resize-none placeholder:text-[rgb(var(--text-muted))]/60"
                     placeholder={
                       isCompleted
                         ? "Trial concluded."
@@ -933,7 +949,7 @@ export default function CourtroomPage({
                   />
                 </div>
                 <div className="mt-2 flex justify-between items-center gap-2">
-                  <span className="text-[10px] font-mono text-[#667781] uppercase shrink-0">
+                  <span className="text-[10px] font-mono text-[rgb(var(--text-muted))] uppercase shrink-0">
                     {isCompleted
                       ? "Trial Complete"
                       : isSubmitting
@@ -947,7 +963,7 @@ export default function CourtroomPage({
                     disabled={isSubmitting || isCompleted || !argumentBuffer.trim() || !isMyTurn}
                     className={`px-4 sm:px-6 py-2 font-mono text-xs font-bold uppercase tracking-wider rounded border transition-all cursor-pointer ${
                       isSubmitting || isCompleted || !argumentBuffer.trim() || !isMyTurn
-                        ? "border-[#D1D7DB] text-[#B2DFDB] bg-[#F0F2F5] cursor-not-allowed"
+                        ? "border-[rgb(var(--border-sub))] text-[rgb(var(--text-muted))] bg-[rgb(var(--bg-elevated))] cursor-not-allowed"
                         : "bg-[#25D366] text-white hover:bg-[#128C7E] shadow-sm border-transparent"
                     }`}
                   >
@@ -966,15 +982,16 @@ export default function CourtroomPage({
           </div>
         </section>
 
-        {/* Right: Evidence Folder */}
+        {/* Right: Evidence Vault */}
         <aside
-          className={`w-full md:w-1/4 p-4 border-l border-[#D1D7DB] bg-[#F0F2F5] overflow-y-auto ${
+          className={`w-full md:w-72 md:shrink-0 p-4 border-l border-[rgb(var(--border-sub))] bg-[rgb(var(--bg-elevated))] overflow-y-auto ${
             mobilePanelTab === "evidence" ? "block" : "hidden md:block"
           }`}
         >
-          <EvidenceFolder
+          <EvidenceVault
             items={evidence}
             onAttach={isMyTurn && !isSubmitting ? handleAttach : undefined}
+            attachedId={attachedEvidence}
           />
         </aside>
       </div>

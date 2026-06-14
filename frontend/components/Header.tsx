@@ -101,6 +101,7 @@ export default function Header() {
             onClick={toggle}
             title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
             className="w-8 h-8 flex items-center justify-center rounded border border-white/20 hover:border-white/50 text-white/60 hover:text-white transition-all cursor-pointer"
+            suppressHydrationWarning
           >
             {theme === "dark" ? (
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
@@ -119,6 +120,7 @@ export default function Header() {
           <button
             onClick={toggle}
             className="w-8 h-8 flex items-center justify-center rounded border border-white/20 text-white/60 cursor-pointer"
+            suppressHydrationWarning
           >
             {theme === "dark" ? (
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">

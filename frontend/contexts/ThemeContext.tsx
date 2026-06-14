@@ -35,10 +35,19 @@ function applyTheme(t: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
-    return (localStorage.getItem("turing_theme") as Theme | null) ?? "dark";
-  });
+  // Always start at "dark" so the server render and the first client render
+  // match (avoids a hydration mismatch). The real stored value is applied
+  // right after mount below.
+  const [theme, setTheme] = useState<Theme>("dark");
+
+  useEffect(() => {
+    const stored = (localStorage.getItem("turing_theme") as Theme | null) ?? "dark";
+    if (stored !== theme) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from localStorage after mount, required for SSR-safe theming
+      setTheme(stored);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);
