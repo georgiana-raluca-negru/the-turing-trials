@@ -274,7 +274,6 @@ The courtroom game layout (`app/courtroom/[matchID]/page.tsx`) was restructured 
 
 - Converted the left "Case Parameters" panel into a **collapsible slide-out sidebar** to maximize chat space, with a toggle button (later restyled for better visibility/contrast).
 - Replaced the static evidence list with a new **`EvidenceVault`** component: a compact "stack of case files" graphic that, on click, opens a fullscreen dark overlay where evidence cards are presented in a scrollable, snap-aligned carousel with floating/fan-in animations — fixing an earlier issue where cards overlapped and were too small to read.
-- Removed the now-unused `EvidenceFolder.tsx` component after confirming it had no remaining references.
 
 ---
 
