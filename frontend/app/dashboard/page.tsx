@@ -29,13 +29,13 @@ const VERDICT_STYLE: Record<string, string> = {
   not_guilty: "border-emerald-400 text-emerald-700 bg-emerald-50",
   pending:    "border-amber-400  text-amber-700  bg-amber-50",
   guilty:     "border-red-400   text-red-700   bg-red-50",
-  abandoned:  "border-[#D1D7DB]  text-[#667781]  bg-[#F0F2F5]",
+  abandoned:  "border-[rgb(var(--border-sub))]  text-[rgb(var(--text-muted))]  bg-[rgb(var(--bg-elevated))]",
 };
 
 const RESULT_STYLE: Record<string, string> = {
   win:  "border-emerald-400 text-emerald-700 bg-emerald-50",
   loss: "border-red-400    text-red-700    bg-red-50",
-  "n/a":  "border-[#D1D7DB]  text-[#667781]  bg-transparent",
+  "n/a":  "border-[rgb(var(--border-sub))]  text-[rgb(var(--text-muted))]  bg-transparent",
 };
 
 export default function DashboardPage() {
@@ -70,7 +70,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center flex-grow min-h-[calc(100vh-57px)] bg-[#ECE5DD]">
+      <div className="flex items-center justify-center flex-grow min-h-[calc(100vh-57px)] bg-[rgb(var(--bg-page))]">
         <Spinner label="Decrypting Archives…" />
       </div>
     );
@@ -78,13 +78,13 @@ export default function DashboardPage() {
 
   if (!data) {
     return (
-      <div className="flex flex-col items-center justify-center flex-grow min-h-[calc(100vh-57px)] bg-[#ECE5DD] gap-4">
+      <div className="flex flex-col items-center justify-center flex-grow min-h-[calc(100vh-57px)] bg-[rgb(var(--bg-page))] gap-4">
         <p className="font-mono text-red-600 text-sm bg-red-50 border border-red-300 px-6 py-4 rounded-xl uppercase tracking-wider">
           Archive unavailable.
         </p>
         <button
           onClick={() => window.location.reload()}
-          className="text-xs font-mono text-[#667781] hover:text-[#075E54] uppercase tracking-widest transition-colors cursor-pointer"
+          className="text-xs font-mono text-[rgb(var(--text-muted))] hover:text-[rgb(var(--heading))] uppercase tracking-widest transition-colors cursor-pointer"
         >
           Retry Connection
         </button>
@@ -95,15 +95,15 @@ export default function DashboardPage() {
   const winRatePct = Math.round((data.win_rate ?? 0) * 100);
 
   return (
-    <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 min-h-[calc(100vh-57px)] flex flex-col gap-6 bg-[#ECE5DD]">
+    <div className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 min-h-[calc(100vh-57px)] flex flex-col gap-6 bg-[rgb(var(--bg-page))]">
 
       {/* Header */}
-      <div className="border-b border-[#D1D7DB] pb-4 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
+      <div className="border-b border-[rgb(var(--border-sub))] pb-4 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-[#075E54]">
+          <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-[rgb(var(--heading))]">
             User Archives
           </h2>
-          <p className="text-xs font-mono text-[#667781] mt-1 uppercase tracking-widest flex items-center gap-2">
+          <p className="text-xs font-mono text-[rgb(var(--text-muted))] mt-1 uppercase tracking-widest flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-[#25D366] rounded-full animate-pulse" />
             Agent: {data.user.username} · Win Rate: {winRatePct}%
           </p>
@@ -117,7 +117,7 @@ export default function DashboardPage() {
           </Link>
           <Link
             href="/setup"
-            className="text-xs font-mono text-[#075E54] hover:text-white uppercase tracking-widest transition-colors border border-[#25D366] hover:bg-[#25D366] px-3 py-1.5 rounded-lg"
+            className="text-xs font-mono text-[rgb(var(--heading))] hover:text-white uppercase tracking-widest transition-colors border border-[#25D366] hover:bg-[#25D366] px-3 py-1.5 rounded-lg"
           >
             + New Trial
           </Link>
@@ -131,15 +131,15 @@ export default function DashboardPage() {
           { label: "Victories",     value: data.total_wins },
           { label: "Win Rate",      value: `${winRatePct}%` },
         ].map((s) => (
-          <div key={s.label} className="bg-white border border-[#D1D7DB] rounded-xl p-3 sm:p-4 text-center shadow-sm">
-            <p className="text-xl sm:text-3xl font-black text-[#075E54]">{s.value}</p>
-            <p className="text-[10px] text-[#667781] uppercase tracking-widest mt-1 font-mono">{s.label}</p>
+          <div key={s.label} className="bg-[rgb(var(--bg-surface))] border border-[rgb(var(--border-sub))] rounded-xl p-3 sm:p-4 text-center shadow-sm">
+            <p className="text-xl sm:text-3xl font-black text-[rgb(var(--heading))]">{s.value}</p>
+            <p className="text-[10px] text-[rgb(var(--text-muted))] uppercase tracking-widest mt-1 font-mono">{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* Match list */}
-      <div className="bg-white rounded-2xl border border-[#D1D7DB] overflow-hidden shadow-sm flex-grow">
+      <div className="bg-[rgb(var(--bg-surface))] rounded-2xl border border-[rgb(var(--border-sub))] overflow-hidden shadow-sm flex-grow">
 
         {/* Desktop table */}
         <div className="hidden sm:block overflow-x-auto">
@@ -156,7 +156,7 @@ export default function DashboardPage() {
             <tbody>
               {data.recent_matches.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-[#667781] text-xs uppercase tracking-widest">
+                  <td colSpan={5} className="p-8 text-center text-[rgb(var(--text-muted))] text-xs uppercase tracking-widest">
                     No records found. Initiate a new trial.
                   </td>
                 </tr>
@@ -165,15 +165,15 @@ export default function DashboardPage() {
                   <tr
                     key={match.id}
                     onClick={() => router.push(`/courtroom/${match.id}`)}
-                    className="border-b border-[#F0F2F5] hover:bg-[#F0F2F5] transition-colors cursor-pointer group"
+                    className="border-b border-[rgb(var(--bg-elevated))] hover:bg-[rgb(var(--bg-elevated))] transition-colors cursor-pointer group"
                   >
-                    <td className="p-4 text-sm text-[#667781] whitespace-nowrap">
+                    <td className="p-4 text-sm text-[rgb(var(--text-muted))] whitespace-nowrap">
                       {new Date(match.created_at).toLocaleDateString()}
                     </td>
-                    <td className="p-4 text-sm font-bold text-[#111B21]">
+                    <td className="p-4 text-sm font-bold text-[rgb(var(--text-fg))]">
                       <span className="border-l-2 border-[#25D366] pl-2 capitalize">{match.player_role.replace(/_/g, " ")}</span>
                     </td>
-                    <td className="p-4 text-sm text-[#667781] max-w-xs truncate">
+                    <td className="p-4 text-sm text-[rgb(var(--text-muted))] max-w-xs truncate">
                       {match.case_summary ?? "—"}
                     </td>
                     <td className="p-4">
@@ -200,9 +200,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Mobile card list */}
-        <div className="sm:hidden divide-y divide-[#F0F2F5]">
+        <div className="sm:hidden divide-y divide-[rgb(var(--bg-elevated))]">
           {data.recent_matches.length === 0 ? (
-            <p className="p-6 text-center text-[#667781] text-xs uppercase tracking-widest">
+            <p className="p-6 text-center text-[rgb(var(--text-muted))] text-xs uppercase tracking-widest">
               No records found.
             </p>
           ) : (
@@ -210,10 +210,10 @@ export default function DashboardPage() {
               <button
                 key={match.id}
                 onClick={() => router.push(`/courtroom/${match.id}`)}
-                className="w-full text-left p-4 hover:bg-[#F0F2F5] transition-colors font-mono"
+                className="w-full text-left p-4 hover:bg-[rgb(var(--bg-elevated))] transition-colors font-mono"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] text-[#667781] uppercase tracking-widest">
+                  <span className="text-[10px] text-[rgb(var(--text-muted))] uppercase tracking-widest">
                     {new Date(match.created_at).toLocaleDateString()}
                   </span>
                   <div className="flex gap-1">
@@ -231,10 +231,10 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 </div>
-                <p className="text-xs font-bold text-[#075E54] capitalize border-l-2 border-[#25D366] pl-2 mb-1">
+                <p className="text-xs font-bold text-[rgb(var(--heading))] capitalize border-l-2 border-[#25D366] pl-2 mb-1">
                   {match.player_role.replace(/_/g, " ")}
                 </p>
-                <p className="text-xs text-[#667781] line-clamp-2">
+                <p className="text-xs text-[rgb(var(--text-muted))] line-clamp-2">
                   {match.case_summary ?? "No summary available."}
                 </p>
               </button>
@@ -242,8 +242,8 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="bg-[#F0F2F5] p-3 border-t border-[#D1D7DB] text-right">
-          <span className="text-[10px] text-[#667781] uppercase font-mono tracking-widest">
+        <div className="bg-[rgb(var(--bg-elevated))] p-3 border-t border-[rgb(var(--border-sub))] text-right">
+          <span className="text-[10px] text-[rgb(var(--text-muted))] uppercase font-mono tracking-widest">
             Total Matches: {data.total_matches}
           </span>
         </div>

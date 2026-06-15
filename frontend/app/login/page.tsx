@@ -42,31 +42,31 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center flex-grow p-4 min-h-[calc(100vh-57px)] bg-[#ECE5DD]">
-      <div className="w-full max-w-md bg-white rounded-2xl border border-[#D1D7DB] shadow-lg p-8">
+    <div className="flex flex-col items-center justify-center flex-grow p-4 min-h-[calc(100vh-57px)] bg-[rgb(var(--bg-page))]">
+      <div className="w-full max-w-md bg-[rgb(var(--bg-surface))] rounded-2xl border border-[rgb(var(--border-sub))] shadow-lg p-8">
 
-        <div className="text-center mb-8 border-b border-[#D1D7DB] pb-6">
+        <div className="text-center mb-8 border-b border-[rgb(var(--border-sub))] pb-6">
           <div className="w-12 h-12 bg-[#075E54] rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
             <span className="text-white text-xl font-black">T</span>
           </div>
-          <h2 className="text-2xl font-black uppercase tracking-widest text-[#075E54]">
+          <h2 className="text-2xl font-black uppercase tracking-widest text-[rgb(var(--heading))]">
             Authorization
           </h2>
-          <p className="text-[10px] font-mono text-[#667781] mt-1 uppercase tracking-widest">
+          <p className="text-[10px] font-mono text-[rgb(var(--text-muted))] mt-1 uppercase tracking-widest">
             Secure Connection // Enter Credentials
           </p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div className="group">
-            <label className="block text-xs font-mono font-bold mb-2 uppercase tracking-widest text-[#667781] group-focus-within:text-[#075E54] transition-colors">
+            <label className="block text-xs font-mono font-bold mb-2 uppercase tracking-widest text-[rgb(var(--text-muted))] group-focus-within:text-[rgb(var(--heading))] transition-colors">
               &gt; User_Email
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 bg-[#F0F2F5] border border-[#D1D7DB] rounded-lg text-[#111B21] font-mono text-sm focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none transition-all placeholder:text-[#667781]/60"
+              className="w-full p-3 bg-[rgb(var(--bg-elevated))] border border-[rgb(var(--border-sub))] rounded-lg text-[rgb(var(--text-fg))] font-mono text-sm focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none transition-all placeholder:text-[rgb(var(--text-muted))]/60"
               placeholder="agent@turing.net"
               required
               disabled={isLoading}
@@ -74,14 +74,14 @@ export default function LoginPage() {
           </div>
 
           <div className="group">
-            <label className="block text-xs font-mono font-bold mb-2 uppercase tracking-widest text-[#667781] group-focus-within:text-[#075E54] transition-colors">
+            <label className="block text-xs font-mono font-bold mb-2 uppercase tracking-widest text-[rgb(var(--text-muted))] group-focus-within:text-[rgb(var(--heading))] transition-colors">
               &gt; Password
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 bg-[#F0F2F5] border border-[#D1D7DB] rounded-lg text-[#111B21] font-mono text-sm focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none transition-all placeholder:text-[#667781]/60"
+              className="w-full p-3 bg-[rgb(var(--bg-elevated))] border border-[rgb(var(--border-sub))] rounded-lg text-[rgb(var(--text-fg))] font-mono text-sm focus:ring-2 focus:ring-[#25D366] focus:border-[#25D366] outline-none transition-all placeholder:text-[rgb(var(--text-muted))]/60"
               placeholder="••••••••"
               required
               disabled={isLoading}
@@ -93,7 +93,7 @@ export default function LoginPage() {
             disabled={isLoading}
             className={`w-full py-3.5 mt-2 font-mono font-bold uppercase tracking-widest rounded-lg transition-all duration-200 cursor-pointer ${
               isLoading
-                ? "bg-[#D1D7DB] text-white cursor-wait"
+                ? "bg-[rgb(var(--border-sub))] text-white cursor-wait"
                 : "bg-[#25D366] text-white hover:bg-[#128C7E] shadow-[0_2px_8px_rgba(37,211,102,0.35)]"
             }`}
           >
@@ -108,10 +108,10 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center border-t border-[#D1D7DB] pt-5">
-          <p className="text-xs font-mono text-[#667781]">
+        <div className="mt-6 text-center border-t border-[rgb(var(--border-sub))] pt-5">
+          <p className="text-xs font-mono text-[rgb(var(--text-muted))]">
             No active profile?{" "}
-            <Link href="/register" className="text-[#075E54] hover:text-[#25D366] font-bold transition-colors uppercase tracking-wider">
+            <Link href="/register" className="text-[rgb(var(--heading))] hover:text-[#25D366] font-bold transition-colors uppercase tracking-wider">
               [ Create Account ]
             </Link>
           </p>

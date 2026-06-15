@@ -37,10 +37,10 @@ export default function GlobalError({
         SYSTEM_FAULT: Internal_Error
       </h3>
 
-      <p className="text-slate-400 mb-8 max-w-md font-mono text-sm border-l-2 border-orange-500/50 pl-4 text-left leading-relaxed">
+      <p className="text-[rgb(var(--text-muted))] mb-8 max-w-md font-mono text-sm border-l-2 border-orange-500/50 pl-4 text-left leading-relaxed">
         <span className="text-orange-500/80 block mb-1">ERR_CODE_SERVER_FAULT</span>
         {error.digest && (
-          <span className="text-slate-600 text-[10px] block mb-1 uppercase tracking-widest">
+          <span className="text-[rgb(var(--text-muted))] text-[10px] block mb-1 uppercase tracking-widest">
             DIGEST: {error.digest}
           </span>
         )}
@@ -56,7 +56,7 @@ export default function GlobalError({
         </button>
         <Link
           href="/"
-          className="px-8 py-3.5 bg-transparent text-slate-300 font-mono font-bold uppercase tracking-widest rounded-md border border-slate-700 hover:border-slate-500 hover:text-slate-200 transition-all duration-300"
+          className="px-8 py-3.5 bg-transparent text-[rgb(var(--text-fg))] font-mono font-bold uppercase tracking-widest rounded-md border border-[rgb(var(--border-sub))] hover:border-[rgb(var(--heading))] hover:text-[rgb(var(--heading))] transition-all duration-300"
         >
           Return to Secure Lobby
         </Link>

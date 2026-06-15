@@ -1,23 +1,60 @@
 @import "tailwindcss";
 
-/* ── WhatsApp-inspired palette ───────────────────────────────────────────── */
-:root {
-  --bg-base:    236 229 221;   /* #ECE5DD warm beige */
-  --bg-surface: 240 242 245;   /* #F0F2F5 panel bg   */
-  --text-base:  17  27  33;    /* #111B21 dark text   */
-  --border-sub: 209 215 219;   /* #D1D7DB light gray  */
+/* ── Theme palette ────────────────────────────────────────────────────────
+   Default (no class / .dark): deep charcoal "courtroom at night" theme.
+   .light: warm cream "paper file" theme.
+   Primary green accents (#25D366 / #128C7E) stay constant across themes.
+─────────────────────────────────────────────────────────────────────────── */
+:root,
+html.dark {
+  --bg-page:     26  26  29;    /* #1A1A1D deep charcoal            */
+  --bg-surface:  36  36  41;    /* #242429 card / panel bg          */
+  --bg-elevated: 47  47  54;    /* #2F2F36 inputs / elevated surface*/
+  --text-fg:   226 232 240;   /* #E2E8F0 crisp off-white text     */
+  --text-muted:  154 154 166;   /* #9A9AA6 secondary / labels       */
+  --border-sub:  63  63  72;    /* #3F3F48 hairline borders         */
+  --heading:     100 230 184;   /* #64E6B8 accent headings          */
+
+  /* Chat bubbles */
+  --bubble-defense-bg:      57  255 138;  /* #39FF8A bright vivid green */
+  --bubble-defense-text:    9   28  18;   /* #091C12 */
+  --bubble-defense-border:  37  211 102;  /* #25D366 */
+
+  --bubble-prosecution-bg:      54  54  64;   /* #363640 cold slate gray */
+  --bubble-prosecution-text:    214 214 224;  /* #D6D6E0 */
+  --bubble-prosecution-border:  82  82  94;   /* #52525E */
+
+  --bubble-judge-bg:     58  47  20;   /* #3A2F14 */
+  --bubble-judge-text:   255 213 79;   /* #FFD54F */
+  --bubble-judge-border: 122 92  26;   /* #7A5C1A */
 }
 
 html.light {
-  --bg-base:    240 242 245;
-  --bg-surface: 255 255 255;
-  --text-base:  17  27  33;
-  --border-sub: 209 215 219;
+  --bg-page:     249 249 244;   /* #F9F9F4 warm cream / paper       */
+  --bg-surface:  255 255 255;   /* #FFFFFF card / panel bg          */
+  --bg-elevated: 240 242 245;   /* #F0F2F5 inputs / elevated surface*/
+  --text-fg:   17  27  33;    /* #111B21 primary text             */
+  --text-muted:  102 119 129;   /* #667781 secondary / labels       */
+  --border-sub:  209 215 219;   /* #D1D7DB hairline borders         */
+  --heading:     7   94  84;    /* #075E54 accent headings          */
+
+  /* Chat bubbles */
+  --bubble-defense-bg:      27  67  50;   /* #1B4332 deep hunter green */
+  --bubble-defense-text:    255 255 255;  /* #FFFFFF */
+  --bubble-defense-border:  45  100 66;   /* #2D6442 */
+
+  --bubble-prosecution-bg:      255 255 255; /* #FFFFFF crisp white */
+  --bubble-prosecution-text:    17  27  33;  /* #111B21 */
+  --bubble-prosecution-border:  17  17  17;  /* #111111 subtle black border */
+
+  --bubble-judge-bg:     255 248 225; /* #FFF8E1 */
+  --bubble-judge-text:   146 64  14;  /* #92400E */
+  --bubble-judge-border: 255 224 130; /* #FFE082 */
 }
 
 body {
-  background-color: rgb(var(--bg-base));
-  color: rgb(var(--text-base));
+  background-color: rgb(var(--bg-page));
+  color: rgb(var(--text-fg));
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -31,12 +68,70 @@ body {
   animation: toastIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* ── Pulsing neon glow (CTA buttons) ─────────────────────────────────────── */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 6px 0 rgba(37, 211, 102, 0.45), 0 2px 8px rgba(37, 211, 102, 0.35); }
+  50%      { box-shadow: 0 0 22px 6px rgba(37, 211, 102, 0.65), 0 2px 8px rgba(37, 211, 102, 0.35); }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2.6s ease-in-out infinite;
+}
+
+/* ── Terminal cursor blink ────────────────────────────────────────────────── */
+@keyframes cursorBlink {
+  0%, 50%  { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: cursorBlink 1s step-end infinite;
+}
+
+/* ── Fade-in-up entrance ──────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Evidence vault: floating fanned cards ───────────────────────────────── */
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+
+.float-card {
+  animation: floatCard 3.2s ease-in-out infinite;
+}
+
+@keyframes vaultOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.vault-overlay-in {
+  animation: vaultOverlayIn 0.2s ease-out both;
+}
+
+@keyframes cardFanIn {
+  from { opacity: 0; transform: translateY(30px) scale(0.85); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.card-fan-in {
+  animation: cardFanIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #D1D7DB transparent;
+  scrollbar-color: rgb(var(--border-sub)) transparent;
 }
 
 *::-webkit-scrollbar { width: 6px; height: 6px; }
 *::-webkit-scrollbar-track  { background: transparent; }
-*::-webkit-scrollbar-thumb  { background-color: #D1D7DB; border-radius: 3px; }
+*::-webkit-scrollbar-thumb  { background-color: rgb(var(--border-sub)); border-radius: 3px; }

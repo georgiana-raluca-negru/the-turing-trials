@@ -25,16 +25,16 @@ export default function NotFound() {
         OBJECTION! Data_Not_Found
       </h3>
       
-      <p className="text-slate-400 mb-8 max-w-md font-mono text-sm border-l-2 border-red-500/50 pl-4 text-left leading-relaxed">
+      <p className="text-[rgb(var(--text-muted))] mb-8 max-w-md font-mono text-sm border-l-2 border-red-500/50 pl-4 text-left leading-relaxed">
         <span className="text-red-500/80 block mb-1">ERR_CODE_NULL_POINTER</span>
         Fișierul cu probe nu există în arhiva curentă. Accesul la acest sector este interzis sau memoria a fost ștearsă.
       </p>
-      
-      <Link 
-        href="/" 
-        className="px-8 py-3.5 bg-transparent text-slate-300 font-mono font-bold uppercase tracking-widest rounded-md border border-slate-700 hover:border-red-500 hover:text-red-400 shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(239,68,68,0.2),_inset_0_0_15px_rgba(239,68,68,0.1)] transition-all duration-300 group"
+
+      <Link
+        href="/"
+        className="px-8 py-3.5 bg-transparent text-[rgb(var(--text-fg))] font-mono font-bold uppercase tracking-widest rounded-md border border-[rgb(var(--border-sub))] hover:border-red-500 hover:text-red-400 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)] hover:shadow-[0_0_20px_rgba(239,68,68,0.2),_inset_0_0_15px_rgba(239,68,68,0.1)] transition-all duration-300 group"
       >
-        <span className="text-slate-600 group-hover:text-red-500 mr-2">&lt;</span>
+        <span className="text-[rgb(var(--text-muted))] group-hover:text-red-500 mr-2">&lt;</span>
         Return to Secure Lobby
       </Link>
       
