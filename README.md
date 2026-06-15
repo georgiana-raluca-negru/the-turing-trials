@@ -20,7 +20,6 @@
 - [Project Structure](#project-structure)
 - [Local Setup](#local-setup)
 - [Deployment](#deployment)
-- [Product Backlog - User Stories](#product-backlog---user-stories)
 - [Contributing](#contributing)
 
 ---
@@ -255,48 +254,6 @@ docker compose up --build -d
 ```
 
 > `NEXT_PUBLIC_API_URL` is baked into the Next.js bundle at build time. A container restart alone is not enough — a full rebuild is required when this value changes.
-
----
-
-## Product Backlog - User Stories
-
-### Authentication & User Account
-
-| ID | Status | Story |
-|---|---|---|
-| US1 | Partial | As a visitor, I want to register using my email and password, **so that** I can have a dedicated profile. *(OAuth via Google/GitHub is not yet implemented.)* |
-| US2 | Done | As an authenticated user, I want to securely log out, **so that** I can protect my data on shared devices. |
-| US3 | Done | As a user, I want a Dashboard showing my match history (role, case summary, verdict, date) and a global leaderboard, **so that** I can track my performance. |
-
-### AI Clerk & Match Setup
-
-| ID | Status | Story |
-|---|---|---|
-| US4 | Done | As a player, I want to input a short prompt describing the trial idea, **so that** I can provide a starting point for case generation. |
-| US5 | Done | As a player, I want to select my role (Defense Attorney, Prosecutor, Judge, or Spectator), **so that** I can determine my level of interaction. |
-| US6 | Done | As a player, I want evidence distributed only to my role, **so that** strategic competition and surprise are maintained. |
-
-### Courtroom UI & Evidence Inventory
-
-| ID | Status | Story |
-|---|---|---|
-| US7 | Done | As a player, I want a fixed case summary always visible, **so that** I don't lose track of essential details. |
-| US8 | Done | As a playing attorney, I want a visual Evidence Folder showing cards I can consult, **so that** I can build my strategy. |
-| US9 | Done | As a player, I want to select an evidence card and attach it to my argument, **so that** I can submit a fact-based argument. |
-| US10 | Done | As a player, I want used evidence cards to be marked in my folder, **so that** I am challenged to produce new arguments each round. |
-
-### AI Interaction & Objection Mechanic
-
-| ID | Status | Story |
-|---|---|---|
-| US11 | Done | As a player, I want a one-time **Objection** button available during my turn, **so that** I can challenge a flawed opponent argument and force the AI to address it directly in its next response. |
-
-### AI Judge, Scales of Justice & Verdict
-
-| ID | Status | Story |
-|---|---|---|
-| US12 | Done | As a player, I want a visual Scales of Justice bar that updates after each round, **so that** I can monitor match momentum in real time. |
-| US13 | Done | As the Judge, I want to deliver a motivated final verdict after the debate concludes, **so that** I can officially close the session with a reasoned decision. |
 
 ---
 
