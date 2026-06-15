@@ -116,11 +116,31 @@ def _to_ai_state(state: MatchRuntimeState) -> dict:
 
 
 def _build_message_history(state: MatchRuntimeState) -> list[Argument]:
+    all_cards = (
+        state.case_file.prosecution_evidence
+        + state.case_file.defense_evidence
+        + state.case_file.shared_evidence
+    )
+    evidence_by_code = {card.code: card for card in all_cards}
+
     messages = []
     for turn in state.transcript:
         if turn.actor_role == ActorRole.JUDGE:
             continue
-        messages.append(_to_ai_argument(turn))
+        arg = _to_ai_argument(turn)
+        if turn.attached_evidence_ids:
+            evidence_notes = []
+            for code in turn.attached_evidence_ids:
+                card = evidence_by_code.get(code)
+                if card:
+                    evidence_notes.append(
+                        f"[Evidence submitted: {card.title} — {card.description}]"
+                    )
+            if evidence_notes:
+                arg = arg.model_copy(
+                    update={"text": arg.text + "\n" + "\n".join(evidence_notes)}
+                )
+        messages.append(arg)
         if turn.system_note == "[OBJECTION RAISED]":
             messages.append(Argument(
                 speaker="System",
