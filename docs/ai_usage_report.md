@@ -134,7 +134,7 @@ Claude diagnosed and fixed two recurring console errors on the homepage:
 
 Both fixes were verified via `eslint` and a full `npm run build` (all 9 routes building successfully).
 
-#### 5. Homepage Redesign
+#### 2. Homepage Redesign
 
 Claude implemented a full visual redesign of the landing page (`app/page.tsx`, `app/globals.css`) toward a "high-stakes, dark cyber-courtroom" aesthetic:
 
@@ -144,7 +144,7 @@ Claude implemented a full visual redesign of the landing page (`app/page.tsx`, `
 - Added hover effects to the "How It Works" and "Rules of the Court" cards — a slight lift plus a neon-green shadow — and increased text sizes for readability.
 - Added a subtle animated cyber-grid background and staggered fade-in-up entrance animations.
 
-#### 6. Courtroom UI Redesign
+#### 3. Courtroom UI Redesign
 
 Claude restructured the courtroom game layout (`app/courtroom/[matchID]/page.tsx`):
 
