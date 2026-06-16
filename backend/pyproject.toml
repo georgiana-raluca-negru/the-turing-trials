@@ -1,3 +1,9 @@
+[tool.pytest.ini_options]
+markers = [
+    "eval: exercises a real agent against the live LLM; costs API credits, so it is excluded by default (run explicitly with `pytest -m eval tests/evals`).",
+]
+addopts = "-m \"not eval\""
+
 [tool.ruff]
 line-length = 120
 

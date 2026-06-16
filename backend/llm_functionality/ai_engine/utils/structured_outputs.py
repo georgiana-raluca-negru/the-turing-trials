@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Generic, Iterable, TypeVar
@@ -236,12 +237,34 @@ def validate_turn_output(turn_output: TurnOutput, *, available_evidence_ids: Ite
     if len(valid_ids) > 1:
         valid_ids = valid_ids[:1]
 
+    cleaned_text = _strip_evidence_codes(turn_output.text.strip(), allowed_ids) or turn_output.text.strip()
+
     return turn_output.model_copy(
         update={
-            "text": turn_output.text.strip(),
+            "text": cleaned_text,
             "attached_evidence_ids": valid_ids,
         }
     )
+
+
+def _strip_evidence_codes(text: str, evidence_ids: Iterable[str]) -> str:
+    """Remove raw evidence ID codes the model wrote into prose despite being told not to.
+
+    The Prosecutor/Defense prompts instruct the LLM to refer to evidence by title and
+    keep IDs only in `attached_evidence_ids`, but the LLM doesn't reliably follow that
+    (e.g. writing "the receipt (EVD-002)"). This is a defense-in-depth scrub, the same
+    pattern as the evidence-id capping above.
+    """
+    stripped = text
+    for evidence_id in evidence_ids:
+        if not evidence_id:
+            continue
+        pattern = re.compile(r"[\(\[\{]?\s*" + re.escape(evidence_id) + r"\s*[\)\]\}]?")
+        stripped = pattern.sub("", stripped)
+
+    stripped = re.sub(r"\s{2,}", " ", stripped)
+    stripped = re.sub(r"\s+([,.;:!?])", r"\1", stripped)
+    return stripped.strip()
 
 
 def validate_verdict(verdict: Verdict) -> Verdict:
