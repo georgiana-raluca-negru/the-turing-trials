@@ -1,6 +1,7 @@
 [tool.pytest.ini_options]
 markers = [
     "eval: exercises a real agent against the live LLM; costs API credits, so it is excluded by default (run explicitly with `pytest -m eval tests/evals`).",
+    "integration: wires multiple modules together (LangGraph workflow, match lifecycle) using fakes/mocks instead of the real LLM; runs by default like unit tests.",
 ]
 addopts = "-m \"not eval\""
 
