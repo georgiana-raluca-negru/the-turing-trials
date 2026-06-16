@@ -1,0 +1,36 @@
+name: Agent Evals
+
+# Manual-only: these tests call the real LLM (MiniMax) and cost API credits,
+# so they don't run on every push/PR like ci.yml's unit tests do. Trigger
+# from the Actions tab whenever you want to check agent prompt quality.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  agent-evals:
+    name: Agent Evals (live LLM)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pytest-asyncio
+
+      - name: Run agent evals
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          DEFAULT_MODEL_NAME: ${{ secrets.DEFAULT_MODEL_NAME }}
+        run: pytest tests/evals -m eval -v --tb=short
