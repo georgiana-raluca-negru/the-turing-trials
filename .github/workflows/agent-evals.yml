@@ -28,9 +28,26 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt pytest pytest-asyncio
 
+      - name: Check API key shape (no value is printed)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python3 -c "
+          import os
+          key = os.environ.get('OPENAI_API_KEY', '')
+          print('key length:', len(key))
+          print('has leading/trailing whitespace:', key != key.strip())
+          print('contains newline:', '\n' in key or '\r' in key)
+          print('contains quote characters:', '\"' in key or \"'\" in key)
+          print('is empty:', key == '')
+          "
+
+      # OPENAI_BASE_URL / DEFAULT_MODEL_NAME are intentionally omitted: if those
+      # secrets don't exist, `${{ secrets.X }}` evaluates to an empty string, and
+      # setting an env var to "" defeats llm_config.py's os.getenv(key, default)
+      # fallback (which only applies when the var is unset, not when it's empty).
+      # Add them back only once both secrets actually exist in this repo.
       - name: Run agent evals
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
-          DEFAULT_MODEL_NAME: ${{ secrets.DEFAULT_MODEL_NAME }}
         run: pytest tests/evals -m eval -v --tb=short
