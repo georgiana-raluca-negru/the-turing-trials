@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import httpx
 import pytest
+import pytest_asyncio
 
 from app.main import app
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def unauthenticated_client(db_session):
     app.dependency_overrides.clear()
 

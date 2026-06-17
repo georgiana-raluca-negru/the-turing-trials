@@ -1,3 +1,7 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
 from backend_integration.adapters.ai_engine import _build_message_history, _parse_verdict_text
 from backend_integration.models.actors import ActorConfiguration, ActorController, ActorRole
 from backend_integration.models.case_file import CaseFileBundle, CaseSummary, EvidenceCard, EvidenceRole

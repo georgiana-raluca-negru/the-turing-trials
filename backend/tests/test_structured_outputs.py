@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.unit
+
 from ai_engine.models.schemas import Argument, CaseContext, CaseFile, Evidence, TurnOutput, Verdict
 from ai_engine.utils.structured_outputs import (
     SemanticValidationError,
