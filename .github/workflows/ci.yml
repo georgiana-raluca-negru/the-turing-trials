@@ -24,6 +24,21 @@ jobs:
       run:
         working-directory: backend
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,18 +51,16 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r requirements.txt ruff pytest pytest-asyncio
+        run: pip install -r requirements.txt ruff pytest pytest-asyncio httpx
 
       - name: Lint — ruff
         run: ruff check . --output-format=github
 
       - name: Run tests
-        run: |
-          if find tests -name "test_*.py" -o -name "*_test.py" 2>/dev/null | grep -q .; then
-            pytest tests/ -v --tb=short
-          else
-            echo "No tests found — skipping."
-          fi
+        env:
+          DATABASE_URL: postgresql+asyncpg://admin:admin@localhost:5432/postgres
+          JWT_SECRET_KEY: ci-test-jwt-secret-key
+        run: pytest tests/ -v --tb=short
 
   # ───────────────────────────────────────────────────────────────────────────
   # FRONTEND — lint, type-check & build

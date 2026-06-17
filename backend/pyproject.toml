@@ -1,7 +1,13 @@
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
 markers = [
-    "eval: exercises a real agent against the live LLM; costs API credits, so it is excluded by default (run explicitly with `pytest -m eval tests/evals`).",
+    "smoke: fast endpoint wiring checks",
+    "unit: deterministic pure logic checks",
     "integration: wires multiple modules together (LangGraph workflow, match lifecycle) using fakes/mocks instead of the real LLM; runs by default like unit tests.",
+    "agent_eval: deterministic agent behavior and workflow checks",
+    "eval: exercises a real agent against the live LLM; costs API credits, so it is excluded by default (run explicitly with `pytest -m eval tests/evals`).",
 ]
 addopts = "-m \"not eval\""
 

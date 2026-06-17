@@ -35,3 +35,8 @@ Thumbs.db
 # ── Logs ─────────────────────────────────────────────────────────────────────
 *.log
 logs/
+
+postgres_volume
+
+# ── LangGraph local API runtime artifacts ────────────────────────────────────
+.langgraph_api/

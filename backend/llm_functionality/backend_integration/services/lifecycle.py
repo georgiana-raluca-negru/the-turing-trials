@@ -82,6 +82,7 @@ def progress_match_state(
             return MatchProgressResult(
                 state=awaiting_state,
                 action=ProgressAction.AWAITING_HUMAN_TURN,
+                latest_turn=awaiting_state.transcript[-1] if awaiting_state.transcript else None,
                 waiting_for_actor=awaiting_state.next_actor,
                 message=f"Waiting for human {awaiting_state.next_actor.value} turn.",
             )
@@ -222,6 +223,7 @@ def _progress_judge_step(
             return MatchProgressResult(
                 state=waiting_state,
                 action=ProgressAction.AWAITING_HUMAN_VERDICT,
+                latest_turn=waiting_state.transcript[-1] if waiting_state.transcript else None,
                 waiting_for_actor=ActorRole.JUDGE,
                 message="Waiting for human judge verdict.",
             )
