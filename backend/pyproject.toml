@@ -1,7 +1,15 @@
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
 markers = [
-    "eval: exercises a real agent against the live LLM; costs API credits, so it is excluded by default (run explicitly with `pytest -m eval tests/evals`).",
+    "smoke: fast endpoint wiring checks",
+    "unit: deterministic pure logic checks",
     "integration: wires multiple modules together (LangGraph workflow, match lifecycle) using fakes/mocks instead of the real LLM; runs by default like unit tests.",
+    "agent_eval: deterministic agent behavior and workflow checks",
+    "eval: exercises a real agent against the live LLM; costs API credits, so it is excluded by default (run explicitly with `pytest -m eval tests/evals`).",
 ]
 addopts = "-m \"not eval\""
 
@@ -11,6 +19,8 @@ line-length = 120
 [tool.ruff.lint.per-file-ignores]
 # sys.path manipulation before imports is intentional for llm_functionality packaging
 "app/main.py" = ["E402"]
+# conftest.py files must manipulate sys.path before importing app/backend_integration modules
+"tests/conftest.py" = ["E402"]
 # All imports in models/__init__.py are intentional re-exports for SQLAlchemy metadata
 "app/models/__init__.py" = ["F401"]
 # SQLAlchemy uses string-based forward references in Mapped["ModelName"] to avoid
