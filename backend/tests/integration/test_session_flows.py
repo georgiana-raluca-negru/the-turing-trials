@@ -76,23 +76,22 @@ async def _get_transcript(client: httpx.AsyncClient, match_id: str) -> list[dict
 
 
 async def _get_match_row(db_session, match_id: str | uuid.UUID) -> Match:
-    db_session.expire_all()
-    match = await db_session.get(Match, _as_uuid(match_id))
+    match = await db_session.get(Match, _as_uuid(match_id), populate_existing=True)
     assert match is not None
     return match
 
 
 async def _get_user_row(db_session, user_id: uuid.UUID) -> User:
-    db_session.expire_all()
-    user = await db_session.get(User, user_id)
+    user = await db_session.get(User, user_id, populate_existing=True)
     assert user is not None
     return user
 
 
 async def _get_session_row(db_session, match_id: str | uuid.UUID) -> GameSession:
-    db_session.expire_all()
     result = await db_session.execute(
-        select(GameSession).where(GameSession.match_id == _as_uuid(match_id))
+        select(GameSession)
+        .where(GameSession.match_id == _as_uuid(match_id))
+        .execution_options(populate_existing=True)
     )
     session = result.scalar_one_or_none()
     assert session is not None
@@ -100,21 +99,21 @@ async def _get_session_row(db_session, match_id: str | uuid.UUID) -> GameSession
 
 
 async def _get_round_rows(db_session, session_id: uuid.UUID) -> list[Round]:
-    db_session.expire_all()
     result = await db_session.execute(
         select(Round)
         .where(Round.game_session_id == session_id)
         .order_by(Round.round_number)
+        .execution_options(populate_existing=True)
     )
     return list(result.scalars().all())
 
 
 async def _get_evidence_rows(db_session, match_id: str | uuid.UUID) -> list[Evidence]:
-    db_session.expire_all()
     result = await db_session.execute(
         select(Evidence)
         .where(Evidence.match_id == _as_uuid(match_id))
         .order_by(Evidence.card_order)
+        .execution_options(populate_existing=True)
     )
     return list(result.scalars().all())
 
