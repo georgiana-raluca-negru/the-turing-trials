@@ -1,12 +1,11 @@
 import pytest
-
-pytestmark = pytest.mark.unit
-
 from backend_integration.adapters.ai_engine import _build_message_history, _parse_verdict_text
 from backend_integration.models.actors import ActorConfiguration, ActorController, ActorRole
 from backend_integration.models.case_file import CaseFileBundle, CaseSummary, EvidenceCard, EvidenceRole
 from backend_integration.models.match import MatchConfig, MatchRuntimeState
 from backend_integration.models.turns import TurnRecord
+
+pytestmark = pytest.mark.unit
 
 
 def _evidence_card(code: str, role: EvidenceRole, title: str = None, description: str = None) -> EvidenceCard:

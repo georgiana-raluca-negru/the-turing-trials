@@ -1,7 +1,4 @@
 import pytest
-
-pytestmark = pytest.mark.unit
-
 from ai_engine.models.schemas import Argument, CaseContext, CaseFile, Evidence, TurnOutput, Verdict
 from ai_engine.utils.structured_outputs import (
     SemanticValidationError,
@@ -13,6 +10,8 @@ from ai_engine.utils.structured_outputs import (
     validate_turn_output,
     validate_verdict,
 )
+
+pytestmark = pytest.mark.unit
 
 
 def _evidence(id_: str, is_used: bool = False) -> Evidence:

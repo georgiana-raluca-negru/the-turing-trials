@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import httpx
-import pytest
 import pytest_asyncio
 
 from app.main import app
