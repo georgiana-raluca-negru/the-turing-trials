@@ -115,6 +115,7 @@ def retrieve_laws_node(
         candidates = retriever.retrieve_laws(query)
     except Exception as exc:
         warning = f"Official Romanian legislation retrieval failed: {exc}"
+        print(f"[LEGAL WARNING] {warning}")
         events.append(warning)
         return {
             "legal_context": context.model_copy(
@@ -203,10 +204,12 @@ def assess_legal_context_node(
             role_name="Legal Context Assessor",
             transport_retries=1,
             max_total_attempts=1,
+            strategy_order=("function_calling",),
         )
         assessment = result.value
     except Exception as exc:
         warning = f"Legal context assessment failed: {exc}"
+        print(f"[LEGAL WARNING] {warning}")
         events.append(warning)
         return {
             "legal_context": context.model_copy(
@@ -228,6 +231,10 @@ def assess_legal_context_node(
         stop_reason = "max_search_rounds"
     elif not assessment.sufficient and not next_query:
         stop_reason = "no_new_results"
+    print(
+        f"[LEGAL INFO] context_assessment sufficient={assessment.sufficient} "
+        f"missing={len(assessment.missing_information)} next_query={next_query!r}"
+    )
 
     return {
         "legal_context": context.model_copy(

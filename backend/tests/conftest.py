@@ -56,6 +56,8 @@ def clear_game_store() -> None:
 async def ensure_schema() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    yield
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture
@@ -96,9 +98,12 @@ async def async_client(persisted_user):
 
     app.dependency_overrides[get_current_user] = override_current_user
 
-    async with app.router.lifespan_context(app):
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-            yield client
+    # The session-scoped schema fixture owns the engine lifecycle. Entering the
+    # application lifespan here would dispose the shared engine while the
+    # db_session fixture still has an open transaction, leaking asyncpg
+    # transports on Windows when the test event loop is collected.
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        yield client
 
     app.dependency_overrides.clear()

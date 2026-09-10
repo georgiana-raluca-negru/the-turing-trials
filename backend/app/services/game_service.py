@@ -13,6 +13,7 @@ Responsibilities:
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -512,32 +513,193 @@ async def get_game_state(match_id: uuid.UUID, db: AsyncSession) -> dict[str, Any
     if runtime_state:
         return _build_game_state_response(match, session, runtime_state)
 
-    # Fallback: return DB-only state (for completed matches without in-memory state)
-    persisted_case_file = json.loads(match.case_file_json) if match.case_file_json else {}
-    persisted_legal_context = persisted_case_file.get("legal_context", {})
-    persisted_sources = [
-        LawSource.model_validate(source)
-        for source in persisted_legal_context.get("sources", [])
-    ]
+    # Fallback: return DB-only state after a process/container restart. Keep this
+    # payload compatible with _build_game_state_response; the frontend must not
+    # need to know whether a match is still present in the in-memory store.
+    persisted_case_file = _load_json_object(match.case_file_json)
+    persisted_legal_context = persisted_case_file.get("legal_context")
+    if not isinstance(persisted_legal_context, dict):
+        persisted_legal_context = {}
+    persisted_sources = _load_persisted_legal_sources(
+        persisted_legal_context.get("sources")
+    )
+    persisted_transcript = _load_persisted_transcript(session.transcript_json)
+    _enrich_persisted_evidence(persisted_transcript, persisted_case_file)
     return {
         "match_id": match_id_str,
+        "session_id": str(session.id),
         "status": match.status.value,
+        "player_role": match.player_role.value,
         "current_round": session.current_round,
         "max_rounds": session.max_rounds,
         "current_turn": session.current_turn,
         "scales_value": session.scales_value,
-        "case_summary": match.case_summary,
-        "verdict": match.verdict.value if match.verdict else None,
-        "verdict_reasoning": match.verdict_reasoning,
-        "transcript": json.loads(session.transcript_json) if session.transcript_json else [],
+        "case_summary": _build_persisted_case_summary(
+            persisted_case_file,
+            match.case_summary,
+        ),
+        "verdict": _build_persisted_verdict(match, persisted_transcript),
+        "transcript": persisted_transcript,
         "evidence": [],
         "waiting_for": None,
+        "system_events": [],
         "objection_available": False,
         "legal_sources": _serialize_legal_sources(persisted_sources),
         "legal_context_status": {
             "sufficient": persisted_legal_context.get("sufficient"),
             "stop_reason": persisted_legal_context.get("stop_reason"),
         },
+    }
+
+
+def _load_json_object(value: str | None) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _load_persisted_transcript(value: str | None) -> list[dict[str, Any]]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(parsed, list):
+        return []
+
+    normalized: list[dict[str, Any]] = []
+    for raw_turn in parsed:
+        if not isinstance(raw_turn, dict):
+            continue
+        turn = dict(raw_turn)
+        turn["text"] = turn.get("text") if isinstance(turn.get("text"), str) else ""
+        turn["evidence_ids"] = (
+            turn.get("evidence_ids") if isinstance(turn.get("evidence_ids"), list) else []
+        )
+        turn["legal_citation_ids"] = (
+            turn.get("legal_citation_ids")
+            if isinstance(turn.get("legal_citation_ids"), list)
+            else []
+        )
+        turn.setdefault("skipped", False)
+        turn.setdefault("system_note", None)
+        normalized.append(turn)
+    return normalized
+
+
+def _enrich_persisted_evidence(
+    transcript: list[dict[str, Any]],
+    case_file: dict[str, Any],
+) -> None:
+    """Restore the evidence-card details present in live API responses.
+
+    The compact persisted transcript stores evidence titles, while a live
+    runtime response also includes descriptions. Rebuild that derived field
+    from the persisted case file so archived spectator matches render exactly
+    like they did before a backend restart.
+    """
+    evidence_by_reference: dict[str, dict[str, str]] = {}
+    for collection_name in (
+        "prosecution_evidence",
+        "defense_evidence",
+        "shared_evidence",
+    ):
+        raw_cards = case_file.get(collection_name)
+        if not isinstance(raw_cards, list):
+            continue
+        for raw_card in raw_cards:
+            if not isinstance(raw_card, dict):
+                continue
+            title = raw_card.get("title")
+            if not isinstance(title, str) or not title:
+                continue
+            details = {
+                "title": title,
+                "desc": str(raw_card.get("description") or ""),
+            }
+            evidence_by_reference[title] = details
+            code = raw_card.get("code")
+            if isinstance(code, str) and code:
+                evidence_by_reference[code] = details
+
+    for turn in transcript:
+        evidence_ids = turn.get("evidence_ids") or []
+        turn["evidence_used"] = [
+            evidence_by_reference[reference]
+            for reference in evidence_ids[:1]
+            if reference in evidence_by_reference
+        ]
+
+
+def _load_persisted_legal_sources(raw_sources: Any) -> list[LawSource]:
+    if not isinstance(raw_sources, list):
+        return []
+    sources: list[LawSource] = []
+    for raw_source in raw_sources:
+        try:
+            sources.append(LawSource.model_validate(raw_source))
+        except (TypeError, ValueError):
+            # One malformed historic source should not make the whole archive
+            # unreadable. Citation markers for it remain plain text in the UI.
+            continue
+    return sources
+
+
+def _build_persisted_case_summary(
+    case_file: dict[str, Any],
+    fallback_summary: str | None,
+) -> dict[str, Any] | None:
+    raw_summary = case_file.get("summary")
+    if isinstance(raw_summary, dict):
+        raw_charges = raw_summary.get("charges")
+        charges = [str(item) for item in raw_charges] if isinstance(raw_charges, list) else []
+        return {
+            "crime": str(raw_summary.get("crime") or fallback_summary or "Case"),
+            "charges": charges,
+            "background_story": str(raw_summary.get("background_story") or ""),
+        }
+    if fallback_summary:
+        return {"crime": fallback_summary, "charges": [], "background_story": ""}
+    return None
+
+
+def _build_persisted_verdict(
+    match: Match,
+    transcript: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if match.verdict in {None, Verdict.PENDING} and not match.verdict_reasoning:
+        return None
+
+    guilty: bool | None = None
+    if match.verdict == Verdict.GUILTY:
+        guilty = True
+    elif match.verdict == Verdict.NOT_GUILTY:
+        guilty = False
+
+    judge_turn = next(
+        (turn for turn in reversed(transcript) if turn.get("actor") == "judge"),
+        None,
+    )
+    verdict_text = str((judge_turn or {}).get("text") or match.verdict_reasoning or "")
+    citation_ids = (judge_turn or {}).get("legal_citation_ids") or []
+    scores_match = re.search(
+        r"Scores\s*-\s*Prosecution:\s*(\d+)\s*/\s*10\s*,\s*Defense:\s*(\d+)\s*/\s*10",
+        verdict_text,
+        re.IGNORECASE,
+    )
+
+    return {
+        "guilty": guilty,
+        "reasoning": match.verdict_reasoning or verdict_text,
+        "prosecution_score": int(scores_match.group(1)) if scores_match else None,
+        "defense_score": int(scores_match.group(2)) if scores_match else None,
+        "verdict_text": verdict_text,
+        "legal_citation_ids": [str(item) for item in citation_ids],
     }
 
 

@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableLambda
 import legal_grounding.workflow as workflow_module
 from legal_grounding.citations import format_source_label, validate_and_clean_citations
 from legal_grounding.models import LawSource, LegalContextAssessment
-from legal_grounding.retrieval import PortalLegislativSOAPRetriever
+from legal_grounding.retrieval import PortalLegislativSOAPRetriever, _build_search_plan
 from legal_grounding.workflow import create_legal_grounding_workflow
 
 
@@ -82,6 +82,15 @@ def test_citation_validation_removes_only_unknown_markers():
     assert format_source_label(source) == "COD nr. 286/2009, art. 1 alin. (1)"
 
 
+def test_search_plan_routes_penal_code_to_official_number_and_year():
+    plan = _build_search_plan("furt autovehicul cod penal 228 232")
+
+    assert plan.text is None
+    assert plan.number == "286"
+    assert plan.year == "2009"
+    assert plan.expected_title_terms == {"codul", "penal"}
+
+
 class _ScriptedRetriever:
     def __init__(self):
         self.queries = []
@@ -97,8 +106,11 @@ class _FakeLLM:
     def __init__(self, response):
         self.response = response
         self.calls = 0
+        self.methods = []
 
     def with_structured_output(self, schema, method=None, include_raw=False):
+        self.methods.append(method)
+
         def invoke(_prompt):
             self.calls += 1
             return {"raw": None, "parsed": self.response, "parsing_error": None}
@@ -143,6 +155,7 @@ def test_grounding_uses_one_assessment_call_and_at_most_two_searches(monkeypatch
     context = result["legal_context"]
     assert retriever.queries == ["termen apel hotărâre civilă", "excepție termen apel"]
     assert llm.calls == 1
+    assert llm.methods == ["function_calling"]
     assert context.search_rounds == 2
     assert context.assessment_calls == 1
     assert [source.id for source in context.sources] == ["LAW_1", "LAW_2"]

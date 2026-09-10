@@ -48,6 +48,32 @@ class _PortalLaw:
     source_url: str
 
 
+@dataclass(frozen=True)
+class _SearchPlan:
+    """Portal-compatible query fields derived without another LLM call."""
+
+    text: str | None
+    year: str | None = None
+    number: str | None = None
+    expected_title_terms: frozenset[str] = frozenset()
+
+
+# SearchText behaves like a phrase/full-text filter. For common codes, searching
+# by the official act number/year is much more reliable than sending a long
+# natural-language query to the SOAP endpoint. This is routing metadata, not a
+# local legal knowledge base.
+_KNOWN_ACTS = (
+    ("cod procedura penala", "135", "2010", frozenset({"codul", "procedura", "penala"})),
+    ("cod procedura civila", "134", "2010", frozenset({"codul", "procedura", "civila"})),
+    ("cod procedura fiscala", "207", "2015", frozenset({"codul", "procedura", "fiscala"})),
+    ("cod penal", "286", "2009", frozenset({"codul", "penal"})),
+    ("cod civil", "287", "2009", frozenset({"codul", "civil"})),
+    ("codul muncii", "53", "2003", frozenset({"codul", "muncii"})),
+    ("cod muncii", "53", "2003", frozenset({"codul", "muncii"})),
+    ("cod fiscal", "227", "2015", frozenset({"codul", "fiscal"})),
+)
+
+
 class PortalLegislativSOAPRetriever:
     """Minimal client for the official Portal Legislativ WCF/SOAP service."""
 
@@ -75,15 +101,30 @@ class PortalLegislativSOAPRetriever:
             return []
         token = self._token or self._get_token()
         self._token = token
-        response_root = self._search(query=normalized_query, token=token)
+        plan = _build_search_plan(normalized_query)
+        response_root = self._search(plan=plan, token=token)
         portal_laws = _parse_search_response(response_root)
+        if plan.expected_title_terms:
+            portal_laws = [
+                law
+                for law in portal_laws
+                if law.number == plan.number
+                and law.act_type
+                and _normalize(law.act_type) == "lege"
+                and plan.expected_title_terms <= set(_tokenize(law.title))
+            ]
         excerpts = [excerpt for law in portal_laws for excerpt in _split_law_into_excerpts(law)]
-        return rank_and_limit_sources(
+        sources = rank_and_limit_sources(
             excerpts,
             normalized_query,
             max_sources=self.max_sources,
             max_context_chars=self.max_context_chars,
         )
+        print(
+            f"[LEGAL INFO] query={normalized_query!r} year={plan.year or '-'} number={plan.number or '-'} "
+            f"portal_acts={len(portal_laws)} excerpts={len(excerpts)} selected_sources={len(sources)}"
+        )
+        return sources
 
     def _get_token(self) -> str:
         operation = ET.Element(f"{{{SERVICE_NS}}}GetToken")
@@ -93,15 +134,21 @@ class PortalLegislativSOAPRetriever:
             raise RuntimeError("Portal Legislativ GetToken returned no token.")
         return token
 
-    def _search(self, *, query: str, token: str) -> ET.Element:
+    def _search(self, *, plan: _SearchPlan, token: str) -> ET.Element:
         operation = ET.Element(f"{{{SERVICE_NS}}}Search")
         search_model = ET.SubElement(operation, f"{{{SERVICE_NS}}}SearchModel")
         ET.SubElement(search_model, f"{{{DATA_NS}}}NumarPagina").text = "0"
         ET.SubElement(search_model, f"{{{DATA_NS}}}RezultatePagina").text = str(self.results_per_page)
-        for name in ("SearchAn", "SearchNumar"):
+        for name, value in (
+            ("SearchAn", plan.year),
+            ("SearchNumar", plan.number),
+            ("SearchText", plan.text),
+        ):
             node = ET.SubElement(search_model, f"{{{DATA_NS}}}{name}")
-            node.set(f"{{{XSI_NS}}}nil", "true")
-        ET.SubElement(search_model, f"{{{DATA_NS}}}SearchText").text = query
+            if value is None:
+                node.set(f"{{{XSI_NS}}}nil", "true")
+            else:
+                node.text = value
         title_node = ET.SubElement(search_model, f"{{{DATA_NS}}}SearchTitlu")
         title_node.set(f"{{{XSI_NS}}}nil", "true")
         ET.SubElement(operation, f"{{{SERVICE_NS}}}tokenKey").text = token
@@ -138,6 +185,27 @@ class PortalLegislativSOAPRetriever:
 
 def retrieve_laws(query: str, *, retriever: LawRetriever | None = None) -> list[LawSource]:
     return (retriever or PortalLegislativSOAPRetriever()).retrieve_laws(query)
+
+
+def _build_search_plan(query: str) -> _SearchPlan:
+    normalized = _normalize(query)
+    for phrase, number, year, title_terms in _KNOWN_ACTS:
+        if phrase in normalized:
+            return _SearchPlan(
+                text=None,
+                year=year,
+                number=number,
+                expected_title_terms=title_terms,
+            )
+
+    number_year_match = re.search(r"\b(\d{1,4})\s*/\s*(\d{4})\b", query)
+    if number_year_match:
+        return _SearchPlan(
+            text=None,
+            number=number_year_match.group(1),
+            year=number_year_match.group(2),
+        )
+    return _SearchPlan(text=query)
 
 
 def _parse_search_response(root: ET.Element) -> list[_PortalLaw]:
