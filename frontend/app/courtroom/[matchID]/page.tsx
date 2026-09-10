@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ScalesOfJustice from "@/components/courtroom/ScalesOfJustice";
 import CaseSummary from "@/components/courtroom/CaseSummary";
 import EvidenceVault, { EvidenceItem } from "@/components/courtroom/EvidenceVault";
+import CitedText, { type LegalSourceRef } from "@/components/courtroom/CitedText";
 import Spinner from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
 import { apiJson, apiFetch } from "@/lib/api";
@@ -31,6 +32,7 @@ interface TranscriptEntry {
   evidence_used?: { title: string; desc: string }[];
   skipped: boolean;
   system_note: string | null;
+  legal_citation_ids?: string[];
 }
 
 interface VerdictData {
@@ -39,6 +41,7 @@ interface VerdictData {
   prosecution_score: number | null;
   defense_score: number | null;
   verdict_text: string | null;
+  legal_citation_ids?: string[];
 }
 
 interface GameState {
@@ -54,6 +57,8 @@ interface GameState {
   verdict: VerdictData | null;
   waiting_for: string | null;
   objection_available: boolean;
+  legal_sources?: LegalSourceRef[];
+  legal_context_status?: { sufficient: boolean | null; stop_reason: string | null };
 }
 
 interface EvidenceCard {
@@ -72,6 +77,7 @@ interface ChatMessage {
   content: string;
   round: number;
   evidenceItems?: { id: string; title: string; desc: string }[];
+  legalCitationIds?: string[];
 }
 
 /* ── Constants & helpers ──────────────────────────────────────────────────── */
@@ -107,6 +113,7 @@ function transcriptToMessages(
           : (ACTOR_TO_MSG_ROLE[t.actor] ?? "judge"),
       content: t.text,
       round: t.cycle,
+      legalCitationIds: t.legal_citation_ids ?? [],
       evidenceItems:
         (t.evidence_used && t.evidence_used.length > 0)
           ? t.evidence_used.map((ev) => ({ id: ev.title, title: ev.title, desc: ev.desc }))
@@ -531,7 +538,12 @@ export default function CourtroomPage({
           )}
         </div>
         <p className={`font-sans leading-relaxed text-xs sm:text-sm ${textColor}`}>
-          {msg.content}
+          <CitedText
+            text={msg.content}
+            sources={(gameState?.legal_sources ?? []).filter((source) =>
+              (msg.legalCitationIds ?? []).includes(source.id),
+            )}
+          />
         </p>
         {msg.evidenceItems && msg.evidenceItems.length > 0 && (
           <div className="mt-2 pt-2 border-t border-current/10 space-y-1.5">
@@ -614,7 +626,12 @@ export default function CourtroomPage({
                 <div>
                   <p className="text-[10px] text-[rgb(var(--text-muted))] uppercase tracking-widest mb-1">Judge&apos;s Reasoning</p>
                   <p className="text-xs text-[rgb(var(--text-muted))] leading-relaxed max-h-32 overflow-y-auto pr-1">
-                    {gameState.verdict.reasoning}
+                    <CitedText
+                      text={gameState.verdict.reasoning}
+                      sources={(gameState.legal_sources ?? []).filter((source) =>
+                        (gameState.verdict?.legal_citation_ids ?? []).includes(source.id),
+                      )}
+                    />
                   </p>
                 </div>
               )}
@@ -804,7 +821,14 @@ export default function CourtroomPage({
                     ? "Not Guilty"
                     : "Pending"}
                 </div>
-                <p className="leading-relaxed text-[rgb(var(--text-fg))]">{gameState.verdict.reasoning}</p>
+                <p className="leading-relaxed text-[rgb(var(--text-fg))]">
+                  <CitedText
+                    text={gameState.verdict.reasoning}
+                    sources={(gameState.legal_sources ?? []).filter((source) =>
+                      (gameState.verdict?.legal_citation_ids ?? []).includes(source.id),
+                    )}
+                  />
+                </p>
               </div>
             )}
 

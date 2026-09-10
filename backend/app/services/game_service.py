@@ -38,6 +38,8 @@ from backend_integration.models.match import (
     ProgressAction,
 )
 from backend_integration.models.turns import HumanJudgeVerdictInput, HumanTurnInput, TurnRecord
+from legal_grounding.citations import format_source_label
+from legal_grounding.models import LawSource
 
 from app.models.evidence import Evidence, EvidenceRole
 from app.models.game_session import GameSession
@@ -511,6 +513,12 @@ async def get_game_state(match_id: uuid.UUID, db: AsyncSession) -> dict[str, Any
         return _build_game_state_response(match, session, runtime_state)
 
     # Fallback: return DB-only state (for completed matches without in-memory state)
+    persisted_case_file = json.loads(match.case_file_json) if match.case_file_json else {}
+    persisted_legal_context = persisted_case_file.get("legal_context", {})
+    persisted_sources = [
+        LawSource.model_validate(source)
+        for source in persisted_legal_context.get("sources", [])
+    ]
     return {
         "match_id": match_id_str,
         "status": match.status.value,
@@ -525,6 +533,11 @@ async def get_game_state(match_id: uuid.UUID, db: AsyncSession) -> dict[str, Any
         "evidence": [],
         "waiting_for": None,
         "objection_available": False,
+        "legal_sources": _serialize_legal_sources(persisted_sources),
+        "legal_context_status": {
+            "sufficient": persisted_legal_context.get("sufficient"),
+            "stop_reason": persisted_legal_context.get("stop_reason"),
+        },
     }
 
 
@@ -726,6 +739,7 @@ async def _sync_transcript_to_db(
             "text": t.text,
             "evidence_ids": [_code_to_title.get(code, code) for code in t.attached_evidence_ids[:1]],
             "skipped": t.skipped,
+            "legal_citation_ids": list(t.legal_citation_ids),
         }
         for t in runtime_state.transcript
     ]
@@ -831,6 +845,7 @@ def _build_game_state_response(
             ],
             "skipped": t.skipped,
             "system_note": t.system_note,
+            "legal_citation_ids": list(t.legal_citation_ids),
         }
         for t in runtime_state.transcript
     ]
@@ -843,6 +858,7 @@ def _build_game_state_response(
             "prosecution_score": runtime_state.verdict.prosecution_score,
             "defense_score": runtime_state.verdict.defense_score,
             "verdict_text": runtime_state.verdict.verdict_text,
+            "legal_citation_ids": list(runtime_state.verdict.legal_citation_ids),
         }
 
     case_summary = None
@@ -877,4 +893,27 @@ def _build_game_state_response(
         ),
         "system_events": runtime_state.system_events,
         "objection_available": objection_available,
+        "legal_sources": _serialize_legal_sources(runtime_state.case_file.legal_context.sources),
+        "legal_context_status": {
+            "sufficient": runtime_state.case_file.legal_context.sufficient,
+            "stop_reason": runtime_state.case_file.legal_context.stop_reason,
+        },
     }
+
+
+def _serialize_legal_sources(sources: list[LawSource]) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": source.id,
+            "label": format_source_label(source),
+            "law": source.law,
+            "article": source.article,
+            "paragraph": source.paragraph,
+            "text": source.text,
+            "status": source.status,
+            "effective_date": source.effective_date,
+            "version_date": source.version_date,
+            "source_url": source.source_url,
+        }
+        for source in sources
+    ]

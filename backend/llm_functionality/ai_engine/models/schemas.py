@@ -32,6 +32,10 @@ class Argument(BaseModel):
     )
     text: str = Field(..., min_length=1, description="The actual text spoken by the agent")
     attached_evidence_ids: List[str] = Field(default_factory=list, description="List of evidence IDs used in this argument")
+    legal_citation_ids: List[str] = Field(
+        default_factory=list,
+        description="Validated LAW_* IDs cited inline in the argument text",
+    )
 
     @field_validator("attached_evidence_ids")
     @classmethod
@@ -44,6 +48,10 @@ class CaseFile(BaseModel):
     case_summary: CaseContext
     defense_evidence: List[Evidence] = Field(..., min_length=1)
     prosecution_evidence: List[Evidence] = Field(..., min_length=1)
+    legal_search_queries: List[str] = Field(
+        default_factory=list,
+        description="One to three short Romanian queries for the official legislative portal",
+    )
 
 class Verdict(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)

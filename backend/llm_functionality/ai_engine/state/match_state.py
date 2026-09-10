@@ -1,5 +1,6 @@
 from typing import TypedDict, List
 from ai_engine.models.schemas import Evidence, CaseContext, Argument
+from legal_grounding.models import LegalContext
 
 class MatchState(TypedDict):
     user_prompt: str
@@ -10,3 +11,5 @@ class MatchState(TypedDict):
     messages: List[Argument] # Chat history
     round_number: int # Current round number
     system_events: List[str] # Non-fatal warnings and runtime notes
+    legal_search_queries: List[str]
+    legal_context: LegalContext

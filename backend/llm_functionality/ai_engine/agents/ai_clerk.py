@@ -19,7 +19,9 @@ def generate_case_node(state: MatchState) -> dict:
                    "and a balanced inventory of evidence for both the defense and prosecution. "
                    "Generate exactly 4 evidence items for the prosecution and exactly 4 evidence items for the defense. "
                    "Ensure the evidence is creative, relevant, and provides strong arguments for both sides. "
-                   "Keep evidence descriptions concise but specific.\n\n"
+                   "Keep evidence descriptions concise but specific. Also produce 1 to 3 short legal_search_queries "
+                   "written in Romanian for searching the applicable Romanian legislation. These queries are search "
+                   "terms only: do not answer the legal issue and do not invent article numbers.\n\n"
                    "{response_contract}"),
         ("human", "Generate a case based on this prompt: {prompt}")
     ])
@@ -42,5 +44,6 @@ def generate_case_node(state: MatchState) -> dict:
         "prosecution_evidence": response.prosecution_evidence,
         "messages": [],
         "round_number": 1,
-        "system_events": []
+        "system_events": [],
+        "legal_search_queries": response.legal_search_queries,
     }

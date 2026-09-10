@@ -39,6 +39,7 @@ def generate_structured_response(
     role_name: str,
     validator: Callable[[T], T] | None = None,
     transport_retries: int = 2,
+    max_total_attempts: int | None = None,
 ) -> StructuredGenerationResult[T]:
     parser = PydanticOutputParser(pydantic_object=schema)
     strategies = (
@@ -50,11 +51,15 @@ def generate_structured_response(
 
     last_error: Exception | None = None
     failure_notes: list[str] = []
+    total_attempts = 0
 
     for strategy_name, response_contract in strategies:
         attempt_number = 0
         while attempt_number < transport_retries:
+            if max_total_attempts is not None and total_attempts >= max_total_attempts:
+                break
             attempt_number += 1
+            total_attempts += 1
             raw_text = None
 
             try:
@@ -91,6 +96,9 @@ def generate_structured_response(
                     time.sleep(min(2 ** attempt_number, 4))
                     continue
                 break
+
+        if max_total_attempts is not None and total_attempts >= max_total_attempts:
+            break
 
     failure_summary = " | ".join(failure_notes[-8:]) if failure_notes else "No attempts were recorded."
     raise StructuredOutputError(

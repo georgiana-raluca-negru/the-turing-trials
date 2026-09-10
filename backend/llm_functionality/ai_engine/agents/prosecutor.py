@@ -11,6 +11,12 @@ from ai_engine.utils.structured_outputs import (
     render_history,
     validate_turn_output,
 )
+from legal_grounding.citations import (
+    legal_citation_instructions,
+    render_legal_context,
+    validate_and_clean_citations,
+)
+from legal_grounding.models import LegalContext
 
 def prosecutor_turn_node(state: MatchState) -> dict:
     llm = get_llm(temperature=0.7)
@@ -23,6 +29,7 @@ def prosecutor_turn_node(state: MatchState) -> dict:
     ]
     available_evidence_ids = [evidence["id"] for evidence in available_evidence]
     history = render_history(state["messages"])
+    legal_context = state.get("legal_context", LegalContext())
     evidence_rule = (
         "No attachable evidence items remain. You may still argue from the debate history, "
         "but attached_evidence_ids MUST be []."
@@ -36,7 +43,8 @@ def prosecutor_turn_node(state: MatchState) -> dict:
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are the Prosecutor in a courtroom trial. Your goal is to prove the defendant guilty.\n"
-                   "You MUST base your arguments ONLY on the available evidence provided below. "
+                   "You MUST base factual claims ONLY on the available evidence provided below, and Romanian legal "
+                   "claims ONLY on the official legislative excerpts. "
                    "DO NOT invent new evidence. You may attach exactly 0 or 1 evidence item to your argument using its ID.\n"
                    "{evidence_rule}\n"
                    "IMPORTANT: When mentioning evidence in your argument TEXT, always refer to it by its title "
@@ -45,6 +53,8 @@ def prosecutor_turn_node(state: MatchState) -> dict:
                    "Keep the argument concise, specific, and under 220 words.\n\n"
                    "Case Context:\n{case_summary}\n\n"
                    "Your Available Evidence:\n{evidence}\n\n"
+                   "Official Romanian Legislation:\n{legal_context}\n\n"
+                   "Citation rules:\n{citation_rules}\n\n"
                    "{response_contract}"),
         ("human", "Here is the trial history so far:\n{history}\n\nMake your next argument.")
     ])
@@ -59,6 +69,8 @@ def prosecutor_turn_node(state: MatchState) -> dict:
                 "evidence": json.dumps(available_evidence, indent=2, ensure_ascii=False),
                 "evidence_rule": evidence_rule,
                 "history": history,
+                "legal_context": render_legal_context(legal_context),
+                "citation_rules": legal_citation_instructions(),
             },
             schema=TurnOutput,
             role_name="Prosecutor",
@@ -66,10 +78,15 @@ def prosecutor_turn_node(state: MatchState) -> dict:
         )
         print(f"[LLM INFO] Prosecutor response accepted via {result.strategy}.")
         turn_output = result.value
+        citation_result = validate_and_clean_citations(turn_output.text, legal_context.sources)
+        if citation_result.invalid_ids:
+            warning = f"Prosecutor used invalid legal citation IDs: {citation_result.invalid_ids}. Markers were removed."
+            system_events.append(warning)
         argument = Argument(
             speaker="Prosecutor",
-            text=turn_output.text,
+            text=citation_result.text,
             attached_evidence_ids=turn_output.attached_evidence_ids,
+            legal_citation_ids=citation_result.cited_ids,
         )
     except Exception as exc:
         argument, warning = build_missed_turn_argument("Prosecutor", str(exc))

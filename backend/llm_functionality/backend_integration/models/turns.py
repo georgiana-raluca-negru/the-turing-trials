@@ -31,6 +31,7 @@ class TurnRecord(BaseModel):
     controller: ActorController
     text: str = Field(..., min_length=1)
     attached_evidence_ids: list[str] = Field(default_factory=list)
+    legal_citation_ids: list[str] = Field(default_factory=list)
     skipped: bool = False
     system_note: str | None = None
 
@@ -43,3 +44,4 @@ class VerdictRecord(BaseModel):
     prosecution_score: int | None = Field(default=None, ge=1, le=10)
     defense_score: int | None = Field(default=None, ge=1, le=10)
     verdict_text: str = Field(..., min_length=1)
+    legal_citation_ids: list[str] = Field(default_factory=list)
