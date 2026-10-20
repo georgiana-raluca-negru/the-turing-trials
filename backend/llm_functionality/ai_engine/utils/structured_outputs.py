@@ -39,22 +39,36 @@ def generate_structured_response(
     role_name: str,
     validator: Callable[[T], T] | None = None,
     transport_retries: int = 2,
+    max_total_attempts: int | None = None,
+    strategy_order: tuple[str, ...] | None = None,
 ) -> StructuredGenerationResult[T]:
     parser = PydanticOutputParser(pydantic_object=schema)
-    strategies = (
+    available_strategies = (
         ("json_schema", "Return a response that matches the requested schema exactly. Do not wrap it in markdown."),
         ("function_calling", "Return a response that matches the requested schema exactly. Do not add extra prose."),
         ("json_mode", "Return a response that matches the requested schema exactly. Do not add extra prose."),
         ("manual_parser", parser.get_format_instructions()),
     )
+    if strategy_order is None:
+        strategies = available_strategies
+    else:
+        contracts = dict(available_strategies)
+        unknown = set(strategy_order) - set(contracts)
+        if unknown:
+            raise ValueError(f"Unknown structured output strategies: {sorted(unknown)}")
+        strategies = tuple((name, contracts[name]) for name in strategy_order)
 
     last_error: Exception | None = None
     failure_notes: list[str] = []
+    total_attempts = 0
 
     for strategy_name, response_contract in strategies:
         attempt_number = 0
         while attempt_number < transport_retries:
+            if max_total_attempts is not None and total_attempts >= max_total_attempts:
+                break
             attempt_number += 1
+            total_attempts += 1
             raw_text = None
 
             try:
@@ -91,6 +105,9 @@ def generate_structured_response(
                     time.sleep(min(2 ** attempt_number, 4))
                     continue
                 break
+
+        if max_total_attempts is not None and total_attempts >= max_total_attempts:
+            break
 
     failure_summary = " | ".join(failure_notes[-8:]) if failure_notes else "No attempts were recorded."
     raise StructuredOutputError(

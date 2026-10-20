@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import ScalesOfJustice from "@/components/courtroom/ScalesOfJustice";
 import CaseSummary from "@/components/courtroom/CaseSummary";
 import EvidenceVault, { EvidenceItem } from "@/components/courtroom/EvidenceVault";
+import CitedText, { type LegalSourceRef } from "@/components/courtroom/CitedText";
 import Spinner from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
 import { apiJson, apiFetch } from "@/lib/api";
@@ -31,6 +32,7 @@ interface TranscriptEntry {
   evidence_used?: { title: string; desc: string }[];
   skipped: boolean;
   system_note: string | null;
+  legal_citation_ids?: string[];
 }
 
 interface VerdictData {
@@ -39,6 +41,7 @@ interface VerdictData {
   prosecution_score: number | null;
   defense_score: number | null;
   verdict_text: string | null;
+  legal_citation_ids?: string[];
 }
 
 interface GameState {
@@ -49,11 +52,13 @@ interface GameState {
   max_rounds: number;
   current_turn: string | null;
   scales_value: number;
-  case_summary: { crime: string; charges: string[]; background_story: string } | null;
+  case_summary: { crime?: string; charges?: string[]; background_story?: string } | null;
   transcript: TranscriptEntry[];
   verdict: VerdictData | null;
   waiting_for: string | null;
   objection_available: boolean;
+  legal_sources?: LegalSourceRef[];
+  legal_context_status?: { sufficient: boolean | null; stop_reason: string | null };
 }
 
 interface EvidenceCard {
@@ -72,6 +77,7 @@ interface ChatMessage {
   content: string;
   round: number;
   evidenceItems?: { id: string; title: string; desc: string }[];
+  legalCitationIds?: string[];
 }
 
 /* ── Constants & helpers ──────────────────────────────────────────────────── */
@@ -92,26 +98,29 @@ const PLAYER_ACTOR: Record<string, string> = {
 const toDisplayScore = (v: number) => Math.round((-v + 1) * 50);
 
 function transcriptToMessages(
-  entries: TranscriptEntry[],
+  entries: TranscriptEntry[] = [],
   playerRole: string,
   knownEvidence: EvidenceItem[] = [],
 ): ChatMessage[] {
   const playerActor = PLAYER_ACTOR[playerRole];
   return entries
-    .filter((t) => !t.skipped && t.text.trim().length > 0)
+    .filter(
+      (t) => !t.skipped && String(t.text ?? "").trim().length > 0,
+    )
     .map((t) => ({
       id: `t-${t.turn_index}`,
       role:
         t.controller === "human" && t.actor === playerActor
           ? "user"
           : (ACTOR_TO_MSG_ROLE[t.actor] ?? "judge"),
-      content: t.text,
+      content: String(t.text ?? ""),
       round: t.cycle,
+      legalCitationIds: t.legal_citation_ids ?? [],
       evidenceItems:
         (t.evidence_used && t.evidence_used.length > 0)
           ? t.evidence_used.map((ev) => ({ id: ev.title, title: ev.title, desc: ev.desc }))
-          : t.evidence_ids.length > 0
-          ? t.evidence_ids.flatMap((title) => {
+          : (t.evidence_ids ?? []).length > 0
+          ? (t.evidence_ids ?? []).flatMap((title) => {
               const item = knownEvidence.find((e) => e.title === title);
               return item ? [{ id: String(item.id), title: item.title, desc: item.desc }] : [];
             })
@@ -162,11 +171,18 @@ export default function CourtroomPage({
   function applyGameState(state: GameState, playerRole: string, currentEvidence: EvidenceItem[]) {
     setGameState(state);
     setDisplayScore(toDisplayScore(state.scales_value ?? 0));
-    setMessages(transcriptToMessages(state.transcript, playerRole, currentEvidence));
+    const transcript = state.transcript ?? [];
+    setMessages(
+      transcriptToMessages(
+        transcript,
+        playerRole,
+        currentEvidence,
+      ),
+    );
     setEvidence((prev) =>
       prev.map((e) => {
-        const usedInTranscript = state.transcript.some((t) =>
-          t.evidence_ids.includes(e.title),
+        const usedInTranscript = transcript.some((t) =>
+          (t.evidence_ids ?? []).includes(e.title),
         );
         return usedInTranscript ? { ...e, used: true } : e;
       }),
@@ -240,7 +256,13 @@ export default function CourtroomPage({
         const cards = await apiJson<EvidenceCard[]>(`/api/evidence/${matchID}`);
         const items = evidenceToItems(cards);
         setEvidence(items);
-        setMessages(transcriptToMessages(state.transcript, matchData.player_role, items));
+        setMessages(
+          transcriptToMessages(
+            state.transcript,
+            matchData.player_role,
+            items,
+          ),
+        );
 
         // 4. For judge/spectator, drive turns one-at-a-time so the debate appears live
         const isWatcher = matchData.player_role === "judge" || matchData.player_role === "spectator";
@@ -436,6 +458,7 @@ export default function CourtroomPage({
   const playerActor = PLAYER_ACTOR[match.player_role] ?? null;
   const isMyTurn = gameState.waiting_for === playerActor;
   const isCompleted = gameState.status === "completed" || gameState.status === "quit";
+  const legalSources = gameState.legal_sources ?? [];
 
   const roleLabel: Record<string, string> = {
     defense_attorney: "Defense Counsel",
@@ -446,7 +469,7 @@ export default function CourtroomPage({
 
 
   const caseSummaryText = gameState.case_summary
-    ? `${gameState.case_summary.crime}: ${gameState.case_summary.charges.join(", ")}`
+    ? `${gameState.case_summary.crime ?? "Case"}: ${(gameState.case_summary.charges ?? []).join(", ")}`
     : match.case_summary;
 
   const verdictLabel =
@@ -531,7 +554,12 @@ export default function CourtroomPage({
           )}
         </div>
         <p className={`font-sans leading-relaxed text-xs sm:text-sm ${textColor}`}>
-          {msg.content}
+          <CitedText
+            text={msg.content}
+            sources={(gameState?.legal_sources ?? []).filter((source) =>
+              (msg.legalCitationIds ?? []).includes(source.id),
+            )}
+          />
         </p>
         {msg.evidenceItems && msg.evidenceItems.length > 0 && (
           <div className="mt-2 pt-2 border-t border-current/10 space-y-1.5">
@@ -614,7 +642,12 @@ export default function CourtroomPage({
                 <div>
                   <p className="text-[10px] text-[rgb(var(--text-muted))] uppercase tracking-widest mb-1">Judge&apos;s Reasoning</p>
                   <p className="text-xs text-[rgb(var(--text-muted))] leading-relaxed max-h-32 overflow-y-auto pr-1">
-                    {gameState.verdict.reasoning}
+                    <CitedText
+                      text={gameState.verdict.reasoning}
+                      sources={(gameState.legal_sources ?? []).filter((source) =>
+                        (gameState.verdict?.legal_citation_ids ?? []).includes(source.id),
+                      )}
+                    />
                   </p>
                 </div>
               )}
@@ -735,6 +768,36 @@ export default function CourtroomPage({
             mobilePanelTab === "chat" ? "flex" : "hidden md:flex"
           }`}
         >
+          <details
+            open={legalSources.length > 0}
+            data-testid="legal-sources-panel"
+            className="mx-3 mt-3 shrink-0 rounded-lg border border-[rgb(var(--border-sub))] bg-[rgb(var(--bg-surface))] px-3 py-2 font-mono text-[10px]"
+          >
+            <summary className="cursor-pointer select-none font-bold uppercase tracking-widest text-[rgb(var(--text-muted))]">
+              Official legal context ({legalSources.length})
+            </summary>
+            {legalSources.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {legalSources.map((source) => (
+                  <a
+                    key={source.id}
+                    href={source.source_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded border border-[rgb(var(--border-sub))] px-2 py-1 text-[rgb(var(--text-muted))] underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--heading))]"
+                    title={`${source.id}: ${source.law}`}
+                  >
+                    {source.id} · {source.label}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-amber-700">
+                No official excerpts retrieved ({gameState.legal_context_status?.stop_reason ?? "not assessed"}).
+              </p>
+            )}
+          </details>
+
           {/* Chat log */}
           <div className="flex-grow p-3 sm:p-4 overflow-y-auto space-y-3">
             {messages.length === 0 && (
@@ -774,37 +837,6 @@ export default function CourtroomPage({
                     />
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Verdict block */}
-            {isCompleted && gameState.verdict && (
-              <div
-                className={`p-4 rounded-lg border font-mono text-xs mt-4 ${
-                  gameState.verdict.guilty === true
-                    ? "bg-red-50 border-red-300"
-                    : gameState.verdict.guilty === false
-                    ? "bg-emerald-50 border-emerald-300"
-                    : "bg-amber-50 border-amber-300"
-                }`}
-              >
-                <div
-                  className={`text-sm font-bold uppercase tracking-widest mb-2 ${
-                    gameState.verdict.guilty === true
-                      ? "text-red-700"
-                      : gameState.verdict.guilty === false
-                      ? "text-emerald-700"
-                      : "text-amber-700"
-                  }`}
-                >
-                  Verdict:{" "}
-                  {gameState.verdict.guilty === true
-                    ? "Guilty"
-                    : gameState.verdict.guilty === false
-                    ? "Not Guilty"
-                    : "Pending"}
-                </div>
-                <p className="leading-relaxed text-[rgb(var(--text-fg))]">{gameState.verdict.reasoning}</p>
               </div>
             )}
 

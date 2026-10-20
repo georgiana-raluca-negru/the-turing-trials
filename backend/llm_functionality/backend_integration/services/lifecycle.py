@@ -37,7 +37,10 @@ def create_match_state(
         current_cycle=1,
         next_actor=ActorRole.PROSECUTION,
         transcript=[],
-        system_events=[],
+        system_events=[
+            f"Legal grounding warning: {error}"
+            for error in resolved_case_file.legal_context.errors
+        ],
     )
     return _refresh_wait_status(state)
 

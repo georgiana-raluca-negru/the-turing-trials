@@ -12,10 +12,12 @@ import ai_engine.agents.ai_clerk as ai_clerk_module
 import ai_engine.agents.ai_judge as ai_judge_module
 import ai_engine.agents.defense as defense_module
 import ai_engine.agents.prosecutor as prosecutor_module
+import legal_grounding.workflow as legal_workflow_module
 import pytest
 from ai_engine.graph.workflow import create_workflow
 from ai_engine.models.schemas import CaseContext, CaseFile, Evidence, TurnOutput, Verdict
 from langchain_core.runnables import RunnableLambda
+from legal_grounding.models import LawSource, LegalContextAssessment
 
 pytestmark = pytest.mark.integration
 
@@ -30,6 +32,21 @@ class _FakeLLM:
 
     def with_structured_output(self, schema, method=None, include_raw=False):
         return RunnableLambda(lambda _formatted_prompt: {"raw": None, "parsed": self._response, "parsing_error": None})
+
+
+class _FakeLawRetriever:
+    def retrieve_laws(self, query: str):
+        return [
+            LawSource(
+                id="LAW_1",
+                law="CODUL PENAL",
+                act_type="COD",
+                act_number="286/2009",
+                article="1",
+                text="Legea penală prevede faptele care constituie infracțiuni.",
+                source_url="https://legislatie.just.ro/Public/DetaliiDocument/109855",
+            )
+        ]
 
 
 @pytest.fixture
@@ -57,8 +74,15 @@ def wired_workflow(monkeypatch):
     monkeypatch.setattr(prosecutor_module, "get_llm", lambda temperature=0.0: _FakeLLM(prosecutor_response))
     monkeypatch.setattr(defense_module, "get_llm", lambda temperature=0.0: _FakeLLM(defense_response))
     monkeypatch.setattr(ai_judge_module, "get_llm", lambda temperature=0.0: _FakeLLM(judge_response))
+    monkeypatch.setattr(
+        legal_workflow_module,
+        "get_llm",
+        lambda temperature=0.0: _FakeLLM(
+            LegalContextAssessment(sufficient=True, missing_information=[], next_search_query=None)
+        ),
+    )
 
-    return create_workflow()
+    return create_workflow(law_retriever=_FakeLawRetriever())
 
 
 class TestWorkflowIntegration:

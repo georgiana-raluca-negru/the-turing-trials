@@ -4,6 +4,8 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from legal_grounding.models import LegalContext
+
 
 class EvidenceRole(str, Enum):
     PROSECUTION = "prosecution"
@@ -39,3 +41,4 @@ class CaseFileBundle(BaseModel):
     prosecution_evidence: list[EvidenceCard] = Field(default_factory=list)
     defense_evidence: list[EvidenceCard] = Field(default_factory=list)
     shared_evidence: list[EvidenceCard] = Field(default_factory=list)
+    legal_context: LegalContext = Field(default_factory=LegalContext)

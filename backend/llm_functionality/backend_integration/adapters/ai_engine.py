@@ -7,6 +7,9 @@ from ai_engine.agents.ai_judge import judge_verdict_node
 from ai_engine.agents.defense import defense_turn_node
 from ai_engine.agents.prosecutor import prosecutor_turn_node
 from ai_engine.models.schemas import Argument, CaseContext, Evidence as AIEngineEvidence
+from legal_grounding.models import LegalContext
+from legal_grounding.retrieval import LawRetriever
+from legal_grounding.workflow import create_legal_grounding_workflow
 
 from backend_integration.models.actors import ActorController, ActorRole
 from backend_integration.models.case_file import CaseFileBundle, CaseSummary, EvidenceCard, EvidenceRole
@@ -16,11 +19,23 @@ from backend_integration.ports.ai_runner import AIRunnerJudgeResult, AIRunnerPor
 
 
 class AIEngineAdapter(AIRunnerPort):
+    def __init__(self, *, law_retriever: LawRetriever | None = None) -> None:
+        self._law_retriever = law_retriever
+
     def generate_case(self, *, user_prompt: str, allow_evidence_reuse: bool) -> CaseFileBundle:
         state_update = generate_case_node(
             {
                 "user_prompt": user_prompt,
                 "allow_evidence_reuse": allow_evidence_reuse,
+            }
+        )
+        legal_state = create_legal_grounding_workflow(retriever=self._law_retriever).invoke(
+            {
+                "user_prompt": user_prompt,
+                "case_summary": state_update["case_summary"],
+                "legal_search_queries": state_update.get("legal_search_queries", []),
+                "legal_context": LegalContext(),
+                "system_events": state_update.get("system_events", []),
             }
         )
         return CaseFileBundle(
@@ -33,6 +48,7 @@ class AIEngineAdapter(AIRunnerPort):
                 _from_ai_evidence(evidence, EvidenceRole.DEFENSE)
                 for evidence in state_update["defense_evidence"]
             ],
+            legal_context=legal_state.get("legal_context", LegalContext()),
         )
 
     def run_actor_turn(self, *, state: MatchRuntimeState, actor_role: ActorRole) -> AIRunnerTurnResult:
@@ -68,6 +84,7 @@ class AIEngineAdapter(AIRunnerPort):
             controller=ActorController.AI,
             text=latest_message.text,
             attached_evidence_ids=latest_message.attached_evidence_ids,
+            legal_citation_ids=latest_message.legal_citation_ids,
             skipped=latest_message.text.startswith("[TURN MISSED]"),
             system_note=new_system_events[-1] if new_system_events else None,
         )
@@ -91,10 +108,14 @@ class AIEngineAdapter(AIRunnerPort):
             controller=ActorController.AI,
             text=latest_message.text,
             attached_evidence_ids=[],
+            legal_citation_ids=latest_message.legal_citation_ids,
             skipped=False,
             system_note=new_system_events[-1] if new_system_events else None,
         )
-        verdict = _parse_verdict_text(latest_message.text)
+        verdict = _parse_verdict_text(
+            latest_message.text,
+            legal_citation_ids=latest_message.legal_citation_ids,
+        )
         return AIRunnerJudgeResult(
             turn=turn,
             verdict=verdict,
@@ -112,6 +133,8 @@ def _to_ai_state(state: MatchRuntimeState) -> dict:
         "messages": _build_message_history(state),
         "round_number": state.current_cycle,
         "system_events": list(state.system_events),
+        "legal_search_queries": list(state.case_file.legal_context.attempted_queries),
+        "legal_context": state.case_file.legal_context.model_copy(deep=True),
     }
 
 
@@ -203,10 +226,15 @@ def _to_ai_argument(turn: TurnRecord) -> Argument:
         speaker=speaker,
         text=turn.text,
         attached_evidence_ids=list(turn.attached_evidence_ids),
+        legal_citation_ids=list(turn.legal_citation_ids),
     )
 
 
-def _parse_verdict_text(text: str) -> VerdictRecord:
+def _parse_verdict_text(
+    text: str,
+    *,
+    legal_citation_ids: list[str] | None = None,
+) -> VerdictRecord:
     normalized_text = text.strip()
     guilty_match = re.search(r"VERDICT:\s*(GUILTY|NOT GUILTY)", normalized_text, flags=re.IGNORECASE)
     reasoning_match = re.search(r"Reasoning:\s*(.*?)(?:\nScores\s*-|$)", normalized_text, flags=re.IGNORECASE | re.DOTALL)
@@ -230,4 +258,5 @@ def _parse_verdict_text(text: str) -> VerdictRecord:
         prosecution_score=prosecution_score,
         defense_score=defense_score,
         verdict_text=normalized_text,
+        legal_citation_ids=list(legal_citation_ids or []),
     )
