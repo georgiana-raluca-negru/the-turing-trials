@@ -25,7 +25,7 @@ langchain-openai
 # -------------------------------------
 # 4. Database (PostgreSQL)
 # -------------------------------------
-sqlalchemy
+sqlalchemy[asyncio]       # async engine/session support requires greenlet
 asyncpg
 alembic
 
