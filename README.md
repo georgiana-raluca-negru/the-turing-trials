@@ -279,7 +279,32 @@ Branch naming conventions:
 - `docs/<N>-description` — documentation
 - `chore/<N>-description` — maintenance / refactoring
 
-### 3. Commit and open a pull request
+### 3. Run CI checks locally
+
+Backend (Python 3.12, from `backend/`):
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m ruff check . --output-format=github
+python -m pytest tests/ -v --tb=short
+```
+
+The test suite needs PostgreSQL 16 and `DATABASE_URL` pointing to a dedicated test database; its fixtures reset the database tables. Set `JWT_SECRET_KEY` to a test value. Live LLM evals are excluded by default.
+
+Ruff is pinned in `backend/requirements-dev.txt`. The rules in `backend/pyproject.toml` explicitly preserve the project's original `E4`, `E7`, `E9`, and `F` checks, so changes to Ruff's defaults do not silently change CI.
+
+Frontend (Node 20, from `frontend/`):
+
+```bash
+npm ci
+npx eslint .
+npx tsc --noEmit
+npm run build
+```
+
+Set `NEXT_PUBLIC_API_URL=http://localhost:8001` for the same build configuration as CI. Deployment runs automatically after CI succeeds on `main`.
+
+### 4. Commit and open a pull request
 
 ```bash
 git commit -m 'feat: short description (closes #42)'
