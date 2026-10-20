@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Keep local lint checks and GitHub Actions on the same Ruff release.
+ruff==0.17.1
+pytest
+pytest-asyncio

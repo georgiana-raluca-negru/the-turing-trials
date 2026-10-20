@@ -15,6 +15,12 @@ addopts = "-m \"not eval\""
 
 [tool.ruff]
 line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# Preserve the project's original lint policy explicitly. New Ruff releases can
+# expand their default rules, which otherwise changes CI without a code change.
+select = ["E4", "E7", "E9", "F"]
 
 [tool.ruff.lint.per-file-ignores]
 # sys.path manipulation before imports is intentional for llm_functionality packaging
